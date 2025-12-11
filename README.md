@@ -57,7 +57,7 @@
 ## Folder Structure
 
 ```
-seasonality-saas/
+seasonality-website/
 ├── .env                    # Environment variables
 ├── .gitignore              # Git ignore rules
 ├── README.md               # Project documentation

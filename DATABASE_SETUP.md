@@ -96,7 +96,7 @@ sudo systemctl restart postgresql
 ### Create .env file:
 
 ```bash
-cd seasonality-saas
+cd seasonality-website
 cp .env.example .env
 ```
 
@@ -115,7 +115,7 @@ DATABASE_URL="postgresql://seasonality_user:your_strong_password@localhost:5432/
 ### Install dependencies:
 
 ```bash
-cd seasonality-saas
+cd seasonality-website
 pnpm install
 ```
 

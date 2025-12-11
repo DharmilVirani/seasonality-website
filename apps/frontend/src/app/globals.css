@@ -1,36 +1,76 @@
-@import "tailwindcss/preflight";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
 @layer base {
-  :root {
-    --primary-color: #3b82f6;
-    --secondary-color: #1e40af;
-    --success-color: #10b981;
-    --danger-color: #ef4444;
-    --warning-color: #f59e0b;
-    --info-color: #06b6d4;
-  }
+    :root {
+        --primary-color: #3b82f6;
+        --secondary-color: #1e40af;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --info-color: #06b6d4;
+    }
+
+    body {
+        @apply bg-gray-50 text-gray-900;
+    }
 }
 
 @layer components {
-  .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
-  }
+    .btn-primary {
+        @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
+    }
 
-  .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-200;
-  }
+    .btn-secondary {
+        @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-200;
+    }
 
-  .card {
-    @apply bg-white rounded-lg shadow-md p-6;
-  }
+    .card {
+        @apply bg-white rounded-lg shadow-md p-6;
+    }
 
-  .form-input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
-  }
+    .form-input {
+        @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    }
 
-  .form-label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
-  }
+    .form-label {
+        @apply block text-sm font-medium text-gray-700 mb-2;
+    }
+}
+
+/* React DatePicker Custom Styles */
+.react-datepicker-wrapper {
+    width: 100%;
+}
+
+.react-datepicker__input-container input {
+    width: 100%;
+}
+
+.react-datepicker {
+    font-family: inherit;
+    border-color: #e5e7eb;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.react-datepicker__header {
+    background-color: #3b82f6;
+    border-bottom-color: #2563eb;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name {
+    color: white;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+    background-color: #3b82f6;
+}
+
+.react-datepicker__day:hover {
+    background-color: #dbeafe;
 }

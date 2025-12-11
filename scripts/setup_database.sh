@@ -111,7 +111,7 @@ else
 fi
 
 step "Setting up environment variables"
-cd /path/to/seasonality-saas || { error "Failed to change directory"; exit 1; }
+cd /path/to/seasonality-website || { error "Failed to change directory"; exit 1; }
 
 if [ ! -f ".env" ]; then
     cp .env.example .env

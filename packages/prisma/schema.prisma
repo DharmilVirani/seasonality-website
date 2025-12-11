@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../../node_modules/@prisma/client"
 }
 
 datasource db {
@@ -27,7 +26,7 @@ model Ticker {
 // Main Seasonality Data Table
 model SeasonalityData {
   id          Int      @id @default(autoincrement())
-  date        Date     // Mandatory field
+  date        DateTime     // Mandatory field
   open        Float    // Null handling: use adjacent close value
   high        Float
   low         Float
