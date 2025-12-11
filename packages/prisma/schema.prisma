@@ -1,0 +1,76 @@
+// Prisma schema for Seasonality SaaS PostgreSQL database
+// This schema handles CSV file uploads with specific data processing rules
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Ticker Index Table - Stores unique ticker symbols with auto-incrementing IDs
+model Ticker {
+  id      Int     @id @default(autoincrement())
+  symbol  String  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationship to seasonality data
+  seasonalityData SeasonalityData[]
+
+  @@index([symbol])
+}
+
+// Main Seasonality Data Table
+model SeasonalityData {
+  id          Int      @id @default(autoincrement())
+  date        Date     // Mandatory field
+  open        Float    // Null handling: use adjacent close value
+  high        Float
+  low         Float
+  close       Float    // Mandatory field
+  volume      Float    // Null handling: default to 0
+  openInterest Float   // Null handling: default to 0
+
+  // Foreign key to Ticker table (uses ticker ID instead of string)
+  tickerId    Int
+  ticker      Ticker   @relation(fields: [tickerId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Composite unique constraint to prevent duplicate entries
+  @@unique([date, tickerId])
+
+  @@index([date])
+  @@index([tickerId])
+}
+
+// User model for authentication
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+// CSV Processing Rules (implemented in application logic):
+// 1. Column name normalization: lowercase, remove spaces
+//    - "OpenInterest" → "openinterest"
+//    - "Open Interest" → "openinterest"
+// 2. Mandatory columns validation: date, ticker, close
+// 3. Null handling:
+//    - Volume/OpenInterest → 0
+//    - Open → adjacent Close value
+//    - Date/Ticker/Close → reject file with error
+// 4. All uploaded files merged into single "Seasonality" dataset
+// 5. Ticker symbols stored in Ticker table with auto-incrementing IDs
+// 6. SeasonalityData references ticker IDs instead of strings

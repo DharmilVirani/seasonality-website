@@ -1,23 +1,16 @@
 {
-  "name": "seasonality-website",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.0.8",
-    "react": "19.2.1",
-    "react-dom": "19.2.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.8",
-    "tailwindcss": "^4"
-  }
+    "name": "seasonality-saas",
+    "version": "1.0.0",
+    "description": "Full Stack SaaS application for seasonality data processing",
+    "private": true,
+    "scripts": {
+        "dev": "pnpm -r dev",
+        "build": "pnpm -r build",
+        "start": "pnpm --filter backend start",
+        "prisma:generate": "pnpm --filter prisma generate",
+        "prisma:migrate": "pnpm --filter prisma migrate dev",
+        "prisma:studio": "pnpm --filter prisma studio",
+        "lint": "pnpm -r lint",
+        "format": "pnpm -r format"
+    }
 }

@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Seasonality SaaS - Full Stack Application
 
-## Getting Started
+## Tech Stack
 
-First, run the development server:
+-   **Frontend**: NextJS 14+ with React Server Components
+-   **Backend**: Node.js with Express
+-   **Database**: PostgreSQL with Prisma ORM
+-   **Storage**: MinIO for file uploads
+-   **Caching**: Redis
+-   **Deployment**: Cloudflare Tunnel for secure access
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Architecture Overview
+
+### System Flow:
+
+1. **User Uploads CSV** → Frontend → API Gateway → File Processing Service
+2. **File Validation** → CSV Parser → Column Normalization → Data Validation
+3. **Database Operations** → Prisma → PostgreSQL (Ticker Index + Master Data)
+4. **Data Processing** → Null Handling → Data Transformation
+5. **Storage** → Processed files stored in MinIO
+6. **Response** → Success/Failure with appropriate messages
+
+### Service Architecture:
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│                        User Interface                          │
+│                        (NextJS Frontend)                      │
+└───────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                        API Gateway                             │
+│                        (Express Server)                       │
+└───────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                        Services Layer                          │
+│  ┌─────────────┐    ┌─────────────┐    ┌───────────────────┐  │
+│  │ File Upload │    │ Data        │    │ Query            │  │
+│  │ Service     │    │ Processing  │    │ Service          │  │
+│  └─────────────┘    └─────────────┘    └───────────────────┘  │
+└───────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                        Data Layer                              │
+│  ┌─────────────┐    ┌─────────────┐    ┌───────────────────┐  │
+│  │ PostgreSQL  │    │ MinIO       │    │ Redis             │  │
+│  │ (Prisma ORM)│    │ (File      │    │ (Caching)         │  │
+│  └─────────────┘    │ Storage)    │    └───────────────────┘  │
+│                     └─────────────┘                          │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Folder Structure
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```
+seasonality-saas/
+├── .env                    # Environment variables
+├── .gitignore              # Git ignore rules
+├── README.md               # Project documentation
+├── package.json            # Project dependencies
+├── pnpm-workspace.yaml     # PNPM workspace config
+│
+├── apps/
+│   ├── frontend/           # NextJS application
+│   │   ├── public/         # Static assets
+│   │   ├── src/
+│   │   │   ├── app/        # NextJS app router
+│   │   │   ├── components/ # React components
+│   │   │   ├── lib/        # Utility functions
+│   │   │   ├── styles/     # CSS/SCSS files
+│   │   │   └── types/      # TypeScript types
+│   │   ├── next.config.js  # NextJS config
+│   │   └── package.json    # Frontend dependencies
+│   │
+│   └── backend/            # Node.js backend
+│       ├── src/
+│       │   ├── controllers/ # Route controllers
+│       │   ├── services/    # Business logic
+│       │   ├── routes/      # API routes
+│       │   ├── middleware/  # Express middleware
+│       │   ├── utils/       # Utility functions
+│       │   ├── config/      # Configuration files
+│       │   └── app.js       # Express app setup
+│       ├── package.json     # Backend dependencies
+│       └── ecosystem.config.js # PM2 config
+│
+├── packages/
+│   └── prisma/             # Shared Prisma schema
+│       ├── schema.prisma   # Database schema
+│       └── package.json    # Prisma dependencies
+│
+└── scripts/                # Deployment and utility scripts
+    ├── deploy.sh           # Deployment script
+    ├── setup.sh            # Setup script
+    └── cleanup.sh          # Cleanup script
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database Schema Design
 
-## Learn More
+### Tables:
 
-To learn more about Next.js, take a look at the following resources:
+1. **tickers** - Stores unique ticker symbols with auto-incrementing IDs
+2. **seasonality_data** - Main data table with foreign key to tickers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Data Flow:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. User uploads CSV → System normalizes column names
+2. Validates required columns (Date, Ticker, Close)
+3. Creates/updates ticker index
+4. Processes data with null handling rules
+5. Stores in seasonality_data table
 
-## Deploy on Vercel
+## CSV Processing Rules:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+-   Column name normalization: lowercase, remove spaces
+-   Mandatory columns: date, ticker, close
+-   Null handling:
+    -   Volume/OpenInterest → 0
+    -   Open → adjacent Close value
+    -   Date/Ticker/Close → reject file
