@@ -26,7 +26,7 @@ model Ticker {
 // Main Seasonality Data Table
 model SeasonalityData {
   id          Int      @id @default(autoincrement())
-  date        DateTime     // Mandatory field
+  date        DateTime @db.Date    // Mandatory field
   open        Float    // Null handling: use adjacent close value
   high        Float
   low         Float
@@ -49,12 +49,17 @@ model SeasonalityData {
 }
 
 // User model for authentication
+enum Role {
+  user
+  admin
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
   password  String
-  role      String   @default("user")
+  role      Role   @default(user)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

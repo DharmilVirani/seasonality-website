@@ -4,10 +4,7 @@ const cors = require('cors')
 const helmet = require('helmet')
 const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
-const { PrismaClient } = require('@prisma/client')
-
-// Initialize Prisma Client
-const prisma = new PrismaClient()
+const prisma = require('./config/database')
 
 // Create Express app
 const app = express()

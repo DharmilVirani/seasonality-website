@@ -12,5 +12,8 @@
         "prisma:studio": "pnpm --filter prisma studio",
         "lint": "pnpm -r lint",
         "format": "pnpm -r format"
+    },
+    "dependencies": {
+        "papaparse": "^5.5.3"
     }
 }

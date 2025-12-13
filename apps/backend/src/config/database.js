@@ -1,41 +1,27 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('@prisma/client')
 
-class Database {
-  constructor() {
-    this.prisma = new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error']
-    });
-  }
+const prisma = new PrismaClient({
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL,
+        },
+    },
+    log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+})
 
-  async connect() {
-    try {
-      await this.prisma.$connect();
-      console.log('✅ Database connected successfully');
-      return this.prisma;
-    } catch (error) {
-      console.error('❌ Database connection failed:', error);
-      throw error;
-    }
-  }
+// Test connection on startup
+prisma
+    .$connect()
+    .then(() => console.log('✅ Database connected successfully'))
+    .catch((error) => {
+        console.error('❌ Database connection failed:', error)
+        process.exit(1)
+    })
 
-  async disconnect() {
-    try {
-      await this.prisma.$disconnect();
-      console.log('🔌 Database disconnected');
-    } catch (error) {
-      console.error('Error disconnecting database:', error);
-    }
-  }
+// Graceful shutdown
+process.on('beforeExit', async () => {
+    await prisma.$disconnect()
+    console.log('🔌 Database disconnected')
+})
 
-  async testConnection() {
-    try {
-      await this.prisma.$queryRaw`SELECT 1`;
-      return true;
-    } catch (error) {
-      console.error('Database test query failed:', error);
-      return false;
-    }
-  }
-}
-
-module.exports = new Database();
+module.exports = prisma
