@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config({ path: './.env' })
 const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
@@ -62,6 +62,8 @@ const PORT = process.env.BACKEND_PORT || 3001
 app.listen(PORT, () => {
     console.log(`Backend server running on port ${PORT}`)
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+    console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'YES ✓' : 'NO ✗')
+    console.log('JWT_SECRET value:', process.env.JWT_SECRET)
 })
 
 // Graceful shutdown
