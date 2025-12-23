@@ -43,40 +43,53 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
-  const handleFileUpload = async (file) => {
-    try {
-      setIsLoading(true);
-      const formData = new FormData();
-      formData.append('file', file);
+const handleFileUpload = async (file) => {
+  try {
+    setIsLoading(true);
+    
+    // Create FormData with the exact field name the backend expects
+    const formData = new FormData();
+    formData.append('file', file); // Must be lowercase 'file'
 
-      const response = await axios.post(`${API_BASE_URL}/api/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+    console.log('Sending request to:', `${API_BASE_URL}/api/upload`);
+    console.log('File details:', { name: file.name, size: file.size, type: file.type });
+
+    const response = await axios.post(`${API_BASE_URL}/api/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    if (response.data.success) {
+      toast.success(`File uploaded successfully! ${response.data.data.recordsProcessed} records processed.`);
+      
+      // Refresh stats after upload
+      const [tickersResponse, dataResponse] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/data/tickers`),
+        axios.get(`${API_BASE_URL}/api/data/aggregate?date=${new Date().toISOString().split('T')[0]}`)
+      ]);
+
+      setStats({
+        tickerCount: tickersResponse.data.success ? tickersResponse.data.data.length : 0,
+        dataCount: dataResponse.data.success ? dataResponse.data.data.records.length : 0,
+        lastUpdated: new Date().toISOString()
       });
-
-      if (response.data.success) {
-        toast.success(`File uploaded successfully! ${response.data.data.recordsProcessed} records processed.`);
-        // Refresh stats after upload
-        const [tickersResponse, dataResponse] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/data/tickers`),
-          axios.get(`${API_BASE_URL}/api/data/aggregate?date=${new Date().toISOString().split('T')[0]}`)
-        ]);
-
-        setStats({
-          tickerCount: tickersResponse.data.success ? tickersResponse.data.data.length : 0,
-          dataCount: dataResponse.data.success ? dataResponse.data.data.records.length : 0,
-          lastUpdated: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to upload file';
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('Upload error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url
+    });
+    
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to upload file';
+    toast.error(errorMessage);
+    throw error; // Re-throw so FileUpload component can catch it
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleLogout = () => {
     // Implement logout logic
