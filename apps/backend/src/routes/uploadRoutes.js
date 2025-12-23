@@ -25,7 +25,7 @@ const upload = multer({
             cb(new Error('Only CSV files are allowed'), false);
         }
     },
-});
+}).single('file'); // Field name must be 'file'
 
 // Create Bull queue for processing jobs
 const processingQueue = new Bull('csv-processing', {
@@ -55,32 +55,65 @@ function generateObjectKey(fileName, batchId = null) {
 // =====================================================
 
 // Single file upload endpoint
-router.post('/', upload.single('file'), async (req, res, next) => {
-    try {
-        if (!req.file) {
+router.post('/', (req, res, next) => {
+    upload(req, res, async (err) => {
+        console.log('Upload attempt - Content-Type:', req.headers['content-type']);
+        console.log('Upload attempt - Files:', req.files);
+        console.log('Upload attempt - File:', req.file);
+
+        // Handle multer errors
+        if (err instanceof multer.MulterError) {
+            console.error('Multer error:', err.code, err.field);
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({
+                    error: 'File too large',
+                    message: 'File size exceeds the limit of 10MB',
+                });
+            }
             return res.status(400).json({
-                error: 'No file uploaded',
-                message: 'Please upload a CSV file',
+                error: 'Upload error',
+                message: `Multer error: ${err.code} - ${err.message}. Field name must be 'file'.`,
+            });
+        }
+        if (err) {
+            console.error('Upload error:', err.message);
+            return res.status(400).json({
+                error: 'Upload error',
+                message: err.message,
             });
         }
 
-        // Process the uploaded CSV file
-        const result = await processSingleFile(req.file);
+        // Continue to processing
+        try {
+            if (!req.file) {
+                console.error('No file in request - Headers:', req.headers['content-type']);
+                return res.status(400).json({
+                    error: 'No file uploaded',
+                    message: 'Please upload a CSV file. In Postman, use form-data with key "file". Current content-type: ' + req.headers['content-type'],
+                });
+            }
 
-        res.status(200).json({
-            success: true,
-            message: 'File processed successfully',
-            data: {
-                fileName: req.file.originalname,
-                recordsProcessed: result.recordsProcessed,
-                tickersFound: result.tickersFound,
-                tickersCreated: result.tickersCreated,
-                dataEntriesCreated: result.dataEntriesCreated,
-            },
-        });
-    } catch (error) {
-        next(error);
-    }
+            console.log('Processing file:', req.file.originalname);
+
+            // Process the uploaded CSV file
+            const result = await processSingleFile(req.file);
+
+            res.status(200).json({
+                success: true,
+                message: 'File processed successfully',
+                data: {
+                    fileName: req.file.originalname,
+                    recordsProcessed: result.recordsProcessed,
+                    tickersFound: result.tickersFound,
+                    tickersCreated: result.tickersCreated,
+                    dataEntriesCreated: result.dataEntriesCreated,
+                },
+            });
+        } catch (error) {
+            console.error('Processing error:', error.message);
+            next(error);
+        }
+    });
 });
 
 /**

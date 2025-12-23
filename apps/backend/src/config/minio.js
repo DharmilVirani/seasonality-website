@@ -5,13 +5,21 @@
 
 const Minio = require('minio');
 
+// Get configuration from environment
+const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
+const port = parseInt(process.env.MINIO_PORT) || 9000;
+const useSSL = process.env.MINIO_USE_SSL === 'true';
+
 // Initialize MinIO client
+// Note: For Docker, use service name 'minio' as hostname
 const minioClient = new Minio.Client({
-    endPoint: process.env.MINIO_ENDPOINT || 'localhost',
-    port: parseInt(process.env.MINIO_PORT) || 9000,
-    useSSL: process.env.MINIO_USE_SSL === 'true',
-    accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-    secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+    endPoint: endpoint,
+    port: port,
+    useSSL: useSSL,
+    accessKey: process.env.MINIO_ACCESS_KEY || 'admin',
+    secretKey: process.env.MINIO_SECRET_KEY || 'admin12345',
+    // Disable automatic DNS lookup issues in Docker
+    transportAgent: null,
 });
 
 // Bucket configuration
@@ -26,12 +34,19 @@ const BUCKETS = {
  */
 async function ensureBucket(bucketName) {
     try {
+        console.log(`Checking bucket '${bucketName}'...`);
         const exists = await minioClient.bucketExists(bucketName);
         if (!exists) {
+            console.log(`Creating bucket '${bucketName}'...`);
             await minioClient.makeBucket(bucketName);
             console.log(`Bucket '${bucketName}' created successfully`);
         }
     } catch (error) {
+        // Handle specific MinIO port error
+        if (error.message && error.message.includes('API port')) {
+            console.error(`MinIO configuration error: ${error.message}`);
+            console.error('Make sure S3 API requests are sent to port 9000, not 9001');
+        }
         console.error(`Error ensuring bucket '${bucketName}':`, error.message);
         throw error;
     }
@@ -41,14 +56,30 @@ async function ensureBucket(bucketName) {
  * Initialize all buckets
  */
 async function initializeBuckets() {
+    console.log(`Initializing MinIO connection to ${endpoint}:${port}...`);
+
+    try {
+        // Test connection by listing buckets
+        console.log('Testing MinIO connection...');
+        const buckets = await minioClient.listBuckets();
+        console.log(`Connected to MinIO. Found ${buckets.length} existing buckets.`);
+    } catch (connError) {
+        console.warn('MinIO not available:', connError.message);
+        console.warn('Server will continue without MinIO - uploads may fail');
+        console.warn('To fix: Ensure MinIO is running and accessible at ' + endpoint + ':' + port);
+        return false;
+    }
+
     try {
         await ensureBucket(BUCKETS.UPLOADS);
         await ensureBucket(BUCKETS.PROCESSED);
         await ensureBucket(BUCKETS.BACKUPS);
-        console.log('All MinIO buckets initialized');
+        console.log('All MinIO buckets initialized successfully');
+        return true;
     } catch (error) {
         console.error('Error initializing MinIO buckets:', error.message);
-        throw error;
+        console.warn('Server will continue without MinIO - uploads may fail');
+        return false;
     }
 }
 
