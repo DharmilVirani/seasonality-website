@@ -54,6 +54,31 @@ export const uploadFile = (file) => {
   });
 };
 
+// Bulk upload - get presigned URLs
+export const getBulkUploadPresignedUrls = (files) => {
+  return api.post('/api/upload/bulk/presign', { files });
+};
+
+// Bulk upload - start processing
+export const startBulkProcessing = (batchId, objectKeys, fileNames) => {
+  return api.post('/api/upload/bulk/process', { batchId, objectKeys, fileNames });
+};
+
+// Get batch status
+export const getBatchStatus = (batchId) => {
+  return api.get(`/api/upload/bulk/${batchId}/status`);
+};
+
+// Get all batches
+export const getBatches = (params = {}) => {
+  return api.get('/api/upload/bulk', { params });
+};
+
+// Retry failed files in batch
+export const retryBatch = (batchId) => {
+  return api.post(`/api/upload/bulk/${batchId}/retry`);
+};
+
 export const getTickers = () => {
   return api.get('/api/data/tickers');
 };

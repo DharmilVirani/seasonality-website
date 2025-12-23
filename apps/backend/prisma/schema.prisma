@@ -78,3 +78,56 @@ model User {
 // 4. All uploaded files merged into single "Seasonality" dataset
 // 5. Ticker symbols stored in Ticker table with auto-incrementing IDs
 // 6. SeasonalityData references ticker IDs instead of strings
+
+// =====================================================
+// BULK CSV PROCESSING MODELS
+// =====================================================
+
+// Upload Batch - Groups multiple CSV files uploaded together
+model UploadBatch {
+  id            String   @id // batch_ID (e.g., batch_1701234567890)
+  status        BatchStatus @default(PENDING)
+  totalFiles    Int
+  processedFiles Int      @default(0)
+  failedFiles   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  files         UploadedFile[]
+  
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Individual Uploaded File - Tracks each CSV file status
+model UploadedFile {
+  id          Int      @id @default(autoincrement())
+  batchId     String
+  objectKey   String   // MinIO object key
+  fileName    String
+  status      FileStatus @default(PENDING)
+  recordsProcessed Int   @default(0)
+  error       String?
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  
+  batch       UploadBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  
+  @@index([batchId])
+  @@index([status])
+}
+
+enum BatchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+enum FileStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}

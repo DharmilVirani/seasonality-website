@@ -5,6 +5,7 @@ const helmet = require('helmet')
 const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 const prisma = require('./config/database')
+const { initializeBuckets } = require('./config/minio')
 
 // Create Express app
 const app = express()
@@ -57,14 +58,35 @@ app.use('*', (req, res) => {
     res.status(404).json({ error: 'Not Found', message: 'The requested resource does not exist' })
 })
 
-// Start server
-const PORT = process.env.BACKEND_PORT || 3001
-app.listen(PORT, () => {
-    console.log(`Backend server running on port ${PORT}`)
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
-    console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'YES ✓' : 'NO ✗')
-    console.log('JWT_SECRET value:', process.env.JWT_SECRET)
-})
+// Initialize MinIO buckets and start server
+const startServer = async () => {
+    try {
+        // Initialize MinIO buckets
+        console.log('Initializing MinIO buckets...')
+        await initializeBuckets()
+        console.log('MinIO buckets initialized successfully')
+
+        // Start server
+        const PORT = process.env.BACKEND_PORT || 3001
+        app.listen(PORT, () => {
+            console.log(`Backend server running on port ${PORT}`)
+            console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+            console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'YES ✓' : 'NO ✗')
+        })
+    } catch (error) {
+        console.error('Failed to initialize MinIO buckets:', error.message)
+        console.log('Server starting without MinIO - uploads may fail')
+
+        // Start server anyway (MinIO might be optional)
+        const PORT = process.env.BACKEND_PORT || 3001
+        app.listen(PORT, () => {
+            console.log(`Backend server running on port ${PORT}`)
+            console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+        })
+    }
+}
+
+startServer()
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
