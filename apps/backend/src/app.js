@@ -4,11 +4,20 @@ const cors = require('cors')
 const helmet = require('helmet')
 const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
+const { Server } = require('socket.io')
+const http = require('http')
 const prisma = require('./config/database')
 const { initializeBuckets } = require('./config/minio')
 
 // Create Express app
 const app = express()
+const server = http.createServer(app)
+const io = new Server(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        methods: ["GET", "POST"]
+    }
+})
 
 // Middleware setup
 app.use(cors())
@@ -24,6 +33,9 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again later',
 })
 app.use(limiter)
+
+// Make io available to routes
+app.set('io', io)
 
 // Import routes
 const uploadRoutes = require('./routes/uploadRoutes')
@@ -76,10 +88,11 @@ const startServer = async () => {
 
         // Start server
         const PORT = process.env.BACKEND_PORT || 3001
-        app.listen(PORT, '0.0.0.0',() => {
+        server.listen(PORT, '0.0.0.0', () => {
             console.log(`Backend server running on port ${PORT}`)
             console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
             console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'YES ✓' : 'NO ✗')
+            console.log('WebSocket server initialized')
         })
     } catch (error) {
         console.error('Failed to initialize MinIO buckets:', error.message)
@@ -87,9 +100,10 @@ const startServer = async () => {
 
         // Start server anyway (MinIO might be optional)
         const PORT = process.env.BACKEND_PORT || 3001
-        app.listen(PORT, '0.0.0.0',() => {
+        server.listen(PORT, '0.0.0.0', () => {
             console.log(`Backend server running on port ${PORT}`)
             console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+            console.log('WebSocket server initialized')
         })
     }
 }
@@ -99,16 +113,19 @@ startServer()
 // Graceful shutdown
 process.on('SIGTERM', () => {
     console.log('SIGTERM received. Shutting down gracefully...')
-    prisma
-        .$disconnect()
-        .then(() => {
-            console.log('Prisma disconnected. Server shutting down.')
-            process.exit(0)
-        })
-        .catch((err) => {
-            console.error('Error during Prisma disconnection:', err)
-            process.exit(1)
-        })
+    io.close()
+    server.close(() => {
+        prisma
+            .$disconnect()
+            .then(() => {
+                console.log('Prisma disconnected. Server shutting down.')
+                process.exit(0)
+            })
+            .catch((err) => {
+                console.error('Error during Prisma disconnection:', err)
+                process.exit(1)
+            })
+    })
 })
 
 module.exports = { app, prisma }
