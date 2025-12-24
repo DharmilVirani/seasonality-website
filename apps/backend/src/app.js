@@ -39,6 +39,12 @@ app.use('/api/health', healthRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/upload/bulk', uploadRoutes)
+app.use('/api/upload/bulk/presign', uploadRoutes)
+app.use('/api/upload/bulk/process', uploadRoutes)
+app.use('/api/upload/bulk/:batchId/status', uploadRoutes)
+
+
+
 
 
 // Health check endpoint
