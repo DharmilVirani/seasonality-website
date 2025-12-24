@@ -22,7 +22,7 @@ export default function BulkUpload({ onUploadComplete }) {
 
         const pollInterval = setInterval(async () => {
             try {
-                const response = await fetch(`/api/upload/bulk/${batchId}/status`);
+                const response = await fetch(`http://localhost:3001/api/upload/bulk/${batchId}/status`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -108,7 +108,7 @@ export default function BulkUpload({ onUploadComplete }) {
 
         try {
             // Step 1: Get presigned URLs
-            const presignResponse = await fetch('/api/upload/bulk/presign', {
+            const presignResponse = await fetch('http://localhost:3001/api/upload/bulk/presign', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -138,7 +138,7 @@ export default function BulkUpload({ onUploadComplete }) {
             }
 
             // Step 3: Trigger async processing
-            const processResponse = await fetch('/api/upload/bulk/process', {
+            const processResponse = await fetch('http://localhost:3001/api/upload/bulk/process', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

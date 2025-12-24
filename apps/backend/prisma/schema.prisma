@@ -5,7 +5,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
+datasource db {s
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
@@ -91,7 +91,7 @@ model UploadBatch {
   processedFiles Int      @default(0)
   failedFiles   Int      @default(0)
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime @updatedAt 
   
   files         UploadedFile[]
   
