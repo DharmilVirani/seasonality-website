@@ -19,29 +19,23 @@ export default function DataManagement() {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
     // Fetch ticker data
-    const fetchData = async () => {
-        try {
-            setIsLoading(true)
-            const response = await axios.get(`${API_BASE_URL}/api/data/tickers`)
-            if (response.data.success) {
-                setTickData(response.data.data)
-            }
-        } catch (error) {
-            console.error('Error fetching ticker data:', error)
-            toast.error('Failed to fetch ticker data')
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    // Initial fetch and setup polling
     useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setIsLoading(true)
+                const response = await axios.get(`${API_BASE_URL}/api/data/tickers`)
+                if (response.data.success) {
+                    setTickData(response.data.data)
+                }
+            } catch (error) {
+                console.error('Error fetching ticker data:', error)
+                toast.error('Failed to fetch ticker data')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
         fetchData()
-
-        // Set up polling every 30 seconds
-        const intervalId = setInterval(fetchData, 30000)
-
-        return () => clearInterval(intervalId)
     }, [])
 
     // Fetch batches when browse tab is active
@@ -93,7 +87,8 @@ export default function DataManagement() {
         if (batchData.failedFiles > 0) {
             toast.warn(`${batchData.failedFiles} files failed.`)
         }
-        // No need to manually refresh - polling will handle it automatically
+        // Refresh ticker data
+        handleRefresh()
     }
 
     const formatDate = (dateString) => {

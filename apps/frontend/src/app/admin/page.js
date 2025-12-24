@@ -18,35 +18,29 @@ export default function AdminDashboard() {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
     // Fetch system statistics
-    const fetchStats = async () => {
-        try {
-            setIsLoading(true)
-            const [tickersResponse, dataResponse] = await Promise.all([
-                axios.get(`${API_BASE_URL}/api/data/tickers`),
-                axios.get(`${API_BASE_URL}/api/data/aggregate?date=${new Date().toISOString().split('T')[0]}`),
-            ])
-
-            setStats({
-                tickerCount: tickersResponse.data.success ? tickersResponse.data.data.length : 0,
-                dataCount: dataResponse.data.success ? dataResponse.data.data.records.length : 0,
-                lastUpdated: new Date().toISOString(),
-            })
-        } catch (error) {
-            console.error('Error fetching stats:', error)
-            toast.error('Failed to fetch system statistics')
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    // Initial fetch and setup polling
     useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                setIsLoading(true)
+                const [tickersResponse, dataResponse] = await Promise.all([
+                    axios.get(`${API_BASE_URL}/api/data/tickers`),
+                    axios.get(`${API_BASE_URL}/api/data/aggregate?date=${new Date().toISOString().split('T')[0]}`),
+                ])
+
+                setStats({
+                    tickerCount: tickersResponse.data.success ? tickersResponse.data.data.length : 0,
+                    dataCount: dataResponse.data.success ? dataResponse.data.data.records.length : 0,
+                    lastUpdated: new Date().toISOString(),
+                })
+            } catch (error) {
+                console.error('Error fetching stats:', error)
+                toast.error('Failed to fetch system statistics')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
         fetchStats()
-
-        // Set up polling every 30 seconds
-        const intervalId = setInterval(fetchStats, 30000)
-
-        return () => clearInterval(intervalId)
     }, [])
 
     const handleFileUpload = async (file) => {
@@ -69,8 +63,17 @@ export default function AdminDashboard() {
             if (response.data.success) {
                 toast.success(`File uploaded successfully! ${response.data.data.recordsProcessed} records processed.`)
 
-                // No need to manually refresh stats - polling will handle it automatically
-                // The 30-second polling interval will pick up the changes
+                // Refresh stats after upload
+                const [tickersResponse, dataResponse] = await Promise.all([
+                    axios.get(`${API_BASE_URL}/api/data/tickers`),
+                    axios.get(`${API_BASE_URL}/api/data/aggregate?date=${new Date().toISOString().split('T')[0]}`),
+                ])
+
+                setStats({
+                    tickerCount: tickersResponse.data.success ? tickersResponse.data.data.length : 0,
+                    dataCount: dataResponse.data.success ? dataResponse.data.data.records.length : 0,
+                    lastUpdated: new Date().toISOString(),
+                })
             }
         } catch (error) {
             console.error('Upload error details:', {
