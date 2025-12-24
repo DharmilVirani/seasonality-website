@@ -122,3 +122,5 @@ seasonality-website/
     -   Volume/OpenInterest → 0
     -   Open → adjacent Close value
     -   Date/Ticker/Close → reject file
+
+Done 
