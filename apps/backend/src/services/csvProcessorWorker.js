@@ -40,6 +40,56 @@ const metrics = {
 };
 
 /**
+ * Parse date string to valid Date object
+ * Handles dd-mm-yyyy format from CSV files
+ */
+function parseDate(dateStr) {
+    if (!dateStr || dateStr.trim() === '') {
+        throw new Error('Empty date value');
+    }
+    
+    const trimmed = dateStr.trim();
+    
+    // Handle dd-mm-yyyy format (e.g., 24-12-2024)
+    const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (ddmmyyyyMatch) {
+        const [, day, month, year] = ddmmyyyyMatch;
+        const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    
+    // Handle dd/mm/yyyy format (e.g., 24/12/2024)
+    const ddmmyyyySlashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (ddmmyyyySlashMatch) {
+        const [, day, month, year] = ddmmyyyySlashMatch;
+        const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    
+    // Handle yyyy-mm-dd format (ISO format)
+    const yyyymmddMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (yyyymmddMatch) {
+        const [, year, month, day] = yyyymmddMatch;
+        const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    
+    // Fallback: try standard JavaScript Date parsing
+    const date = new Date(trimmed);
+    if (!isNaN(date.getTime())) {
+        return date;
+    }
+    
+    throw new Error(`Unable to parse date: "${dateStr}" (expected format: dd-mm-yyyy)`);
+}
+
+/**
  * Normalize CSV column names
  * Maps various column name formats to standard names
  */
@@ -79,6 +129,26 @@ function normalizeColumnNames(headers) {
 }
 
 /**
+ * Detect CSV delimiter
+ */
+function detectDelimiter(content) {
+    const firstLine = content.split('\n')[0];
+    
+    // Count occurrences of common delimiters
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    
+    // Return the most common delimiter
+    if (tabCount > commaCount && tabCount > semicolonCount) {
+        return '\t';
+    } else if (semicolonCount > commaCount) {
+        return ';';
+    }
+    return ',';
+}
+
+/**
  * Process a single CSV file
  */
 async function processCSVFile(filePath, batchId, fileId) {
@@ -87,13 +157,24 @@ async function processCSVFile(filePath, batchId, fileId) {
     try {
         // Read and parse CSV file
         const fileContent = fs.readFileSync(filePath, 'utf-8');
+        
+        // Detect delimiter
+        const delimiter = detectDelimiter(fileContent);
+        console.log(`Detected delimiter: ${delimiter === '\t' ? 'TAB' : delimiter === ',' ? 'COMMA' : 'SEMICOLON'}`);
+        
         const parsed = parse(fileContent, {
             columns: false,
             skip_empty_lines: true,
+            trim: true,
+            relax_quotes: true,
+            relax_column_count: true,
+            delimiter: delimiter,
         });
 
+        console.log(`Parsed ${parsed.length} rows from CSV`);
+
         if (parsed.length < 2) {
-            throw new Error('CSV file is empty or has only header row');
+            throw new Error(`CSV file is empty or has only header row. Parsed ${parsed.length} rows.`);
         }
 
         // Normalize column names
@@ -103,7 +184,7 @@ async function processCSVFile(filePath, batchId, fileId) {
         // Required columns validation
         const requiredColumns = ['date', 'ticker', 'close'];
         const missingColumns = requiredColumns.filter(col => !headers.includes(col));
-        if (missingColumns.length.length > 0) {
+        if (missingColumns.length > 0) {
             throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
         }
 
@@ -147,17 +228,25 @@ async function processCSVFile(filePath, batchId, fileId) {
             tickerMap[t.symbol] = t.id;
         });
 
-        // Transform data for database insertion
-        const seasonalityData = records.map(row => ({
-            date: new Date(row.date),
-            tickerId: tickerMap[row.ticker],
-            open: parseFloat(row.open) || parseFloat(row.close) || 0,
-            high: parseFloat(row.high) || parseFloat(row.close) || 0,
-            low: parseFloat(row.low) || parseFloat(row.close) || 0,
-            close: parseFloat(row.close) || 0,
-            volume: parseFloat(row.volume) || 0,
-            openInterest: parseFloat(row.openInterest) || 0,
-        }));
+        // Transform data for database insertion with proper date parsing
+        const seasonalityData = records.map((row, index) => {
+            try {
+                const date = parseDate(row.date);
+                
+                return {
+                    date,
+                    tickerId: tickerMap[row.ticker],
+                    open: parseFloat(row.open) || parseFloat(row.close) || 0,
+                    high: parseFloat(row.high) || parseFloat(row.close) || 0,
+                    low: parseFloat(row.low) || parseFloat(row.close) || 0,
+                    close: parseFloat(row.close) || 0,
+                    volume: parseFloat(row.volume) || 0,
+                    openInterest: parseFloat(row.openInterest) || 0,
+                };
+            } catch (error) {
+                throw new Error(`Row ${index + 2} (Ticker: ${row.ticker}): ${error.message}`);
+            }
+        });
 
         // Batch insert with upsert
         let totalInserted = 0;
