@@ -38,6 +38,8 @@ app.use('/api/data', dataRoutes)
 app.use('/api/health', healthRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/upload/bulk', uploadRoutes)
+
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -68,7 +70,7 @@ const startServer = async () => {
 
         // Start server
         const PORT = process.env.BACKEND_PORT || 3001
-        app.listen(PORT, () => {
+        app.listen(PORT, '0.0.0.0',() => {
             console.log(`Backend server running on port ${PORT}`)
             console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
             console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'YES ✓' : 'NO ✗')
@@ -79,7 +81,7 @@ const startServer = async () => {
 
         // Start server anyway (MinIO might be optional)
         const PORT = process.env.BACKEND_PORT || 3001
-        app.listen(PORT, () => {
+        app.listen(PORT, '0.0.0.0',() => {
             console.log(`Backend server running on port ${PORT}`)
             console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
         })

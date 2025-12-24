@@ -1,3 +1,4 @@
+
 /**
  * Upload Routes
  * Handles CSV file uploads including bulk uploads with async processing
@@ -25,7 +26,7 @@ const upload = multer({
             cb(new Error('Only CSV files are allowed'), false);
         }
     },
-}).single('file'); // Field name must be 'file'
+});
 
 // Create Bull queue for processing jobs
 const processingQueue = new Bull('csv-processing', {
@@ -34,6 +35,56 @@ const processingQueue = new Bull('csv-processing', {
         port: parseInt(process.env.REDIS_PORT) || 6379,
     },
 });
+
+/**
+ * Parse date string to valid Date object
+ * Handles dd-mm-yyyy format from CSV files
+ */
+function parseDate(dateStr) {
+    if (!dateStr || dateStr.trim() === '') {
+        throw new Error('Empty date value');
+    }
+    
+    const trimmed = dateStr.trim();
+    
+    // Handle dd-mm-yyyy format (e.g., 24-12-2024)
+    const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (ddmmyyyyMatch) {
+        const [, day, month, year] = ddmmyyyyMatch;
+        const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    
+    // Handle dd/mm/yyyy format (e.g., 24/12/2024)
+    const ddmmyyyySlashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (ddmmyyyySlashMatch) {
+        const [, day, month, year] = ddmmyyyySlashMatch;
+        const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    
+    // Handle yyyy-mm-dd format (ISO format)
+    const yyyymmddMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (yyyymmddMatch) {
+        const [, year, month, day] = yyyymmddMatch;
+        const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    
+    // Fallback: try standard JavaScript Date parsing
+    const date = new Date(trimmed);
+    if (!isNaN(date.getTime())) {
+        return date;
+    }
+    
+    throw new Error(`Unable to parse date: "${dateStr}" (expected format: dd-mm-yyyy)`);
+}
 
 /**
  * Generate unique object key for MinIO
@@ -55,65 +106,32 @@ function generateObjectKey(fileName, batchId = null) {
 // =====================================================
 
 // Single file upload endpoint
-router.post('/', (req, res, next) => {
-    upload(req, res, async (err) => {
-        console.log('Upload attempt - Content-Type:', req.headers['content-type']);
-        console.log('Upload attempt - Files:', req.files);
-        console.log('Upload attempt - File:', req.file);
-
-        // Handle multer errors
-        if (err instanceof multer.MulterError) {
-            console.error('Multer error:', err.code, err.field);
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({
-                    error: 'File too large',
-                    message: 'File size exceeds the limit of 10MB',
-                });
-            }
+router.post('/', upload.single('file'), async (req, res, next) => {
+    try {
+        if (!req.file) {
             return res.status(400).json({
-                error: 'Upload error',
-                message: `Multer error: ${err.code} - ${err.message}. Field name must be 'file'.`,
-            });
-        }
-        if (err) {
-            console.error('Upload error:', err.message);
-            return res.status(400).json({
-                error: 'Upload error',
-                message: err.message,
+                error: 'No file uploaded',
+                message: 'Please upload a CSV file',
             });
         }
 
-        // Continue to processing
-        try {
-            if (!req.file) {
-                console.error('No file in request - Headers:', req.headers['content-type']);
-                return res.status(400).json({
-                    error: 'No file uploaded',
-                    message: 'Please upload a CSV file. In Postman, use form-data with key "file". Current content-type: ' + req.headers['content-type'],
-                });
-            }
+        // Process the uploaded CSV file
+        const result = await processSingleFile(req.file);
 
-            console.log('Processing file:', req.file.originalname);
-
-            // Process the uploaded CSV file
-            const result = await processSingleFile(req.file);
-
-            res.status(200).json({
-                success: true,
-                message: 'File processed successfully',
-                data: {
-                    fileName: req.file.originalname,
-                    recordsProcessed: result.recordsProcessed,
-                    tickersFound: result.tickersFound,
-                    tickersCreated: result.tickersCreated,
-                    dataEntriesCreated: result.dataEntriesCreated,
-                },
-            });
-        } catch (error) {
-            console.error('Processing error:', error.message);
-            next(error);
-        }
-    });
+        res.status(200).json({
+            success: true,
+            message: 'File processed successfully',
+            data: {
+                fileName: req.file.originalname,
+                recordsProcessed: result.recordsProcessed,
+                tickersFound: result.tickersFound,
+                tickersCreated: result.tickersCreated,
+                dataEntriesCreated: result.dataEntriesCreated,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
 });
 
 /**
@@ -123,8 +141,22 @@ router.post('/', (req, res, next) => {
  */
 async function processSingleFile(file) {
     const csvContent = file.buffer.toString('utf-8');
+    
+    // Detect delimiter (tab, comma, or semicolon)
+    const firstLine = csvContent.split('\n')[0];
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    
+    let delimiter = ',';
+    if (tabCount > commaCount && tabCount > semicolonCount) {
+        delimiter = '\t';
+    } else if (semicolonCount > commaCount) {
+        delimiter = ';';
+    }
+    
     const rows = csvContent.split('\n').filter(row => row.trim());
-    const headerRow = rows[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
+    const headerRow = rows[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
 
     const requiredColumns = ['date', 'ticker', 'close'];
     const missingColumns = requiredColumns.filter(col => !headerRow.includes(col));
@@ -135,7 +167,7 @@ async function processSingleFile(file) {
 
     const data = [];
     for (let i = 1; i < rows.length; i++) {
-        const values = rows[i].split(',').map(v => v.trim());
+        const values = rows[i].split(delimiter).map(v => v.trim());
         const row = {};
         headerRow.forEach((header, index) => {
             row[header] = values[index] || null;
@@ -160,17 +192,25 @@ async function processSingleFile(file) {
         tickerMap[t.symbol] = t.id;
     });
 
-    // Batch insert data
-    const seasonalityData = data.map(row => ({
-        date: new Date(row.date),
-        tickerId: tickerMap[row.ticker],
-        open: parseFloat(row.open) || parseFloat(row.close) || 0,
-        high: parseFloat(row.high) || parseFloat(row.close) || 0,
-        low: parseFloat(row.low) || parseFloat(row.close) || 0,
-        close: parseFloat(row.close) || 0,
-        volume: parseFloat(row.volume) || 0,
-        openInterest: parseFloat(row.openinterest) || 0,
-    }));
+    // Batch insert data with proper date parsing
+    const seasonalityData = data.map((row, index) => {
+        try {
+            const date = parseDate(row.date);
+            
+            return {
+                date,
+                tickerId: tickerMap[row.ticker],
+                open: parseFloat(row.open) || parseFloat(row.close) || 0,
+                high: parseFloat(row.high) || parseFloat(row.close) || 0,
+                low: parseFloat(row.low) || parseFloat(row.close) || 0,
+                close: parseFloat(row.close) || 0,
+                volume: parseFloat(row.volume) || 0,
+                openInterest: parseFloat(row.openinterest) || 0,
+            };
+        } catch (error) {
+            throw new Error(`Row ${index + 2} (Ticker: ${row.ticker}): ${error.message}`);
+        }
+    });
 
     // Insert in batches
     const BATCH_SIZE = 1000;
@@ -537,7 +577,7 @@ router.post('/bulk/:batchId/retry', async (req, res, next) => {
 
         // Reset file statuses
         await prisma.uploadedFile.updateMany({
-            where: { batchId },
+            where: { batchId, status: 'FAILED' },
             data: {
                 status: 'PENDING',
                 error: null,
