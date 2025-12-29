@@ -452,11 +452,11 @@ processingQueue.on('stalled', (job) => {
 
 // Connection status
 processingQueue.on('ready', () => {
-    console.log('✅ Redis connection established successfully');
+    console.log('Redis connection established successfully');
 });
 
 processingQueue.on('reconnecting', () => {
-    console.log('🔄 Reconnecting to Redis...');
+    console.log('Reconnecting to Redis...');
 });
 
 // Progress logging
@@ -491,6 +491,7 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 // Start worker
+
 console.log(`========================================`);
 console.log(`CSV Processor Worker Started`);
 console.log(`Concurrency: ${CONCURRENCY}`);
