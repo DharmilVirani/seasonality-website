@@ -1,86 +1,75 @@
 'use client';
 
-import { useState } from 'react';
-import { FaChevronDown, FaSearch } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { Form, Spinner, Alert } from 'react-bootstrap';
+import { api } from '../lib/api';
 
-export default function TickerSelector({ tickers, selectedTicker, onTickerChange, isLoading }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+export default function TickerSelector({ value, onChange, onAnalysis }) {
+  const [tickers, setTickers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const filteredTickers = tickers.filter(ticker =>
-    ticker.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchTickers = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await api.get('/tickers');
+        setTickers(response.data.tickers || []);
+      } catch (error) {
+        console.error('Error fetching tickers:', error);
+        setError('Failed to load tickers. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const selectedTickerObj = tickers.find(t => t.id === selectedTicker);
+    fetchTickers();
+  }, []);
+
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    onChange(newValue);
+    if (onAnalysis) {
+      // Debounce the analysis call to avoid too many requests
+      setTimeout(() => onAnalysis(), 100);
+    }
+  };
 
   return (
-    <div className="relative">
-      <label className="form-label">Select Ticker</label>
+    <div>
+      {error && (
+        <Alert variant="warning" className="mb-2">
+          {error}
+        </Alert>
+      )}
 
-      <div className="relative">
-        <button
-          type="button"
-          className="form-input pr-10 text-left cursor-pointer"
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={isLoading}
-        >
-          {selectedTickerObj ? (
-            <div className="flex items-center justify-between">
-              <span>{selectedTickerObj.symbol}</span>
-              <FaChevronDown className="text-gray-400" />
-            </div>
-          ) : (
-            <div className="flex items-center justify-between text-gray-500">
-              <span>Select a ticker...</span>
-              <FaChevronDown className="text-gray-400" />
-            </div>
-          )}
-        </button>
-      </div>
+      <Form.Select
+        value={value}
+        onChange={handleChange}
+        disabled={loading}
+        className="form-select-lg"
+      >
+        {loading ? (
+          <option>Loading tickers...</option>
+        ) : tickers.length === 0 ? (
+          <option>No tickers available</option>
+        ) : (
+          <>
+            <option value="">Select a symbol...</option>
+            {tickers.map(ticker => (
+              <option key={ticker.id} value={ticker.symbol}>
+                {ticker.symbol}
+              </option>
+            ))}
+          </>
+        )}
+      </Form.Select>
 
-      {isOpen && (
-        <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FaSearch className="text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search tickers..."
-                className="w-full pl-10 pr-3 py-1 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                autoFocus
-              />
-            </div>
-          </div>
-
-          <div className="max-h-60 overflow-y-auto">
-            {filteredTickers.length > 0 ? (
-              <ul className="py-1">
-                {filteredTickers.map((ticker) => (
-                  <li
-                    key={ticker.id}
-                    className={`px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 ${
-                      ticker.id === selectedTicker ? 'bg-blue-50 text-blue-600' : 'text-gray-800'
-                    }`}
-                    onClick={() => {
-                      onTickerChange(ticker.id);
-                      setIsOpen(false);
-                      setSearchTerm('');
-                    }}
-                  >
-                    {ticker.symbol}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="px-4 py-3 text-sm text-gray-500">
-                No tickers found
-              </div>
-            )}
-          </div>
+      {loading && (
+        <div className="text-center mt-2">
+          <Spinner size="sm" />
+          <span className="ms-2 text-muted">Loading...</span>
         </div>
       )}
     </div>

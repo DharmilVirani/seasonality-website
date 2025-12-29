@@ -1,100 +1,58 @@
 'use client';
 
-import { useState } from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { FaCalendar } from 'react-icons/fa';
+import React from 'react';
+import { Form, Row, Col } from 'react-bootstrap';
 
-export default function DateRangePicker({ dateRange, onDateRangeChange, isLoading }) {
-  const [startDate, endDate] = dateRange;
+export default function DateRangePicker({ value, onChange }) {
+  const handleStartDateChange = (e) => {
+    const newStartDate = new Date(e.target.value);
+    onChange({
+      ...value,
+      startDate: newStartDate
+    });
+  };
+
+  const handleEndDateChange = (e) => {
+    const newEndDate = new Date(e.target.value);
+    onChange({
+      ...value,
+      endDate: newEndDate
+    });
+  };
+
+  // Format date for input field (YYYY-MM-DD)
+  const formatDateForInput = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   return (
-    <div>
-      <label className="form-label">Date Range</label>
-
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1">
-          <DatePicker
-            selected={startDate}
-            onChange={(date) => onDateRangeChange([date, endDate])}
-            selectsStart
-            startDate={startDate}
-            endDate={endDate}
-            placeholderText="Start date"
-            className="form-input w-full"
-            disabled={isLoading}
-            dateFormat="yyyy-MM-dd"
+    <Row>
+      <Col>
+        <Form.Group className="mb-2">
+          <Form.Label>Start Date</Form.Label>
+          <Form.Control
+            type="date"
+            value={formatDateForInput(value.startDate)}
+            onChange={handleStartDateChange}
+            max={formatDateForInput(value.endDate)}
           />
-          <FaCalendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
-
-        <span className="text-gray-400">to</span>
-
-        <div className="relative flex-1">
-          <DatePicker
-            selected={endDate}
-            onChange={(date) => onDateRangeChange([startDate, date])}
-            selectsEnd
-            startDate={startDate}
-            endDate={endDate}
-            minDate={startDate}
-            placeholderText="End date"
-            className="form-input w-full"
-            disabled={isLoading}
-            dateFormat="yyyy-MM-dd"
+        </Form.Group>
+      </Col>
+      <Col>
+        <Form.Group className="mb-2">
+          <Form.Label>End Date</Form.Label>
+          <Form.Control
+            type="date"
+            value={formatDateForInput(value.endDate)}
+            onChange={handleEndDateChange}
+            min={formatDateForInput(value.startDate)}
           />
-          <FaCalendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
-      </div>
-
-      <div className="mt-2 flex space-x-2">
-        <button
-          type="button"
-          onClick={() => {
-            const today = new Date();
-            const oneMonthAgo = new Date();
-            oneMonthAgo.setMonth(today.getMonth() - 1);
-            onDateRangeChange([oneMonthAgo, today]);
-          }}
-          className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-colors"
-        >
-          Last Month
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            const today = new Date();
-            const threeMonthsAgo = new Date();
-            threeMonthsAgo.setMonth(today.getMonth() - 3);
-            onDateRangeChange([threeMonthsAgo, today]);
-          }}
-          className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-colors"
-        >
-          Last 3 Months
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            const today = new Date();
-            const sixMonthsAgo = new Date();
-            sixMonthsAgo.setMonth(today.getMonth() - 6);
-            onDateRangeChange([sixMonthsAgo, today]);
-          }}
-          className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-colors"
-        >
-          Last 6 Months
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onDateRangeChange([null, null])}
-          className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-colors"
-        >
-          Clear
-        </button>
-      </div>
-    </div>
+        </Form.Group>
+      </Col>
+    </Row>
   );
 }

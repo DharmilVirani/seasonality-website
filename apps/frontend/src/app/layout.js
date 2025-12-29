@@ -1,33 +1,22 @@
 import './globals.css';
-import { Inter } from 'next/font/google';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-
-const inter = Inter({ subsets: ['latin'] });
+import { AuthProvider } from '../lib/auth';
+import { Container } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 export const metadata = {
-  title: 'Seasonality SaaS - Financial Data Analysis',
-  description: 'Advanced seasonality analysis for financial markets',
+  title: 'Seasonality Analysis Dashboard',
+  description: 'Modern seasonality analysis platform',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <main className="min-h-screen bg-gray-50">
-          {children}
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-          />
-        </main>
+      <body>
+        <AuthProvider>
+          <Container fluid className="p-0">
+            {children}
+          </Container>
+        </AuthProvider>
       </body>
     </html>
   );

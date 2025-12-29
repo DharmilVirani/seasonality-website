@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Card, Container, Row, Col, Button, Form, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../lib/auth';
@@ -10,7 +12,7 @@ export default function HomePage() {
   const { user, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Analysis state
   const [selectedSymbol, setSelectedSymbol] = useState('RELIANCE');
   const [timeframe, setTimeframe] = useState('DAILY');
@@ -18,7 +20,7 @@ export default function HomePage() {
     startDate: new Date(new Date().getFullYear(), 0, 1),
     endDate: new Date()
   });
-  
+
   // Analysis results
   const [analysisData, setAnalysisData] = useState(null);
   const [statistics, setStatistics] = useState(null);
@@ -71,7 +73,7 @@ export default function HomePage() {
       <Row>
         <Col>
           <h1 className="mb-4">Seasonality Analysis Dashboard</h1>
-          
+
           {error && (
             <Alert variant="danger" onClose={() => setError(null)} dismissible>
               {error}
@@ -94,7 +96,7 @@ export default function HomePage() {
                 />
               </Form.Group>
             </Col>
-            
+
             <Col md={3}>
               <Form.Group>
                 <Form.Label>Select Timeframe</Form.Label>
@@ -125,7 +127,7 @@ export default function HomePage() {
               <Form.Group>
                 <Form.Label>Actions</Form.Label>
                 <div className="d-grid">
-                  <Button 
+                  <Button
                     onClick={handleAnalysis}
                     disabled={loading}
                     variant="primary"
@@ -257,17 +259,17 @@ export default function HomePage() {
                 <Card.Title>Admin Actions</Card.Title>
                 <Row>
                   <Col md={3}>
-                    <Button 
-                      href="/admin" 
-                      variant="warning" 
+                    <Button
+                      href="/admin"
+                      variant="warning"
                       className="w-100"
                     >
                       Go to Admin Panel
                     </Button>
                   </Col>
                   <Col md={3}>
-                    <Button 
-                      variant="info" 
+                    <Button
+                      variant="info"
                       className="w-100"
                       onClick={() => window.location.reload()}
                     >
@@ -275,8 +277,8 @@ export default function HomePage() {
                     </Button>
                   </Col>
                   <Col md={3}>
-                    <Button 
-                      variant="secondary" 
+                    <Button
+                      variant="secondary"
                       className="w-100"
                       onClick={() => {
                         setSelectedSymbol('RELIANCE');
@@ -293,8 +295,8 @@ export default function HomePage() {
                     </Button>
                   </Col>
                   <Col md={3}>
-                    <Button 
-                      variant="success" 
+                    <Button
+                      variant="success"
                       className="w-100"
                       onClick={handleAnalysis}
                     >
