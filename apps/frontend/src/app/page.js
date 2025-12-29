@@ -1,158 +1,312 @@
-'use client'
+import React, { useState, useEffect } from 'react';
+import { Card, Container, Row, Col, Button, Form, Alert, Spinner } from 'react-bootstrap';
+import { useAuth } from '../lib/auth';
+import { api } from '../lib/api';
+import DataVisualization from '../components/DataVisualization';
+import TickerSelector from '../components/TickerSelector';
+import DateRangePicker from '../components/DateRangePicker';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import axios from 'axios'
-import { toast } from 'react-toastify'
-import FileUpload from '../components/FileUpload'
-import DataVisualization from '../components/DataVisualization'
-import TickerSelector from '../components/TickerSelector'
-import DateRangePicker from '../components/DateRangePicker'
+export default function HomePage() {
+  const { user, isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Analysis state
+  const [selectedSymbol, setSelectedSymbol] = useState('RELIANCE');
+  const [timeframe, setTimeframe] = useState('DAILY');
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(new Date().getFullYear(), 0, 1),
+    endDate: new Date()
+  });
+  
+  // Analysis results
+  const [analysisData, setAnalysisData] = useState(null);
+  const [statistics, setStatistics] = useState(null);
 
-export default function Home() {
-    const [tickers, setTickers] = useState([])
-    const [selectedTicker, setSelectedTicker] = useState(null)
-    const [dateRange, setDateRange] = useState([null, null])
-    const [seasonalityData, setSeasonalityData] = useState([])
-    const [isLoading, setIsLoading] = useState(false)
-    const router = useRouter()
+  // Timeframe options
+  const timeframeOptions = [
+    { value: 'DAILY', label: 'Daily' },
+    { value: 'MONDAY_WEEKLY', label: 'Monday Weekly' },
+    { value: 'EXPIRY_WEEKLY', label: 'Expiry Weekly' },
+    { value: 'MONTHLY', label: 'Monthly' },
+    { value: 'YEARLY', label: 'Yearly' }
+  ];
 
-    // API base URL - should match your backend
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-
-    // Fetch tickers on component mount
-    useEffect(() => {
-        const fetchTickers = async () => {
-            try {
-                setIsLoading(true)
-                const response = await axios.get(`${API_BASE_URL}/api/data/tickers`)
-                if (response.data.success) {
-                    setTickers(response.data.data)
-                    if (response.data.data.length > 0) {
-                        setSelectedTicker(response.data.data[0].id)
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching tickers:', error)
-                toast.error('Failed to fetch ticker data')
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchTickers()
-    }, [])
-
-    // Fetch seasonality data when ticker or date range changes
-    useEffect(() => {
-        if (!selectedTicker) return
-
-        const fetchSeasonalityData = async () => {
-            try {
-                setIsLoading(true)
-                const params = new URLSearchParams()
-                if (dateRange[0]) params.append('startDate', dateRange[0].toISOString())
-                if (dateRange[1]) params.append('endDate', dateRange[1].toISOString())
-
-                const response = await axios.get(
-                    `${API_BASE_URL}/api/data/ticker/${selectedTicker}?${params.toString()}`
-                )
-
-                if (response.data.success) {
-                    setSeasonalityData(response.data.data.records)
-                }
-            } catch (error) {
-                console.error('Error fetching seasonality data:', error)
-                toast.error('Failed to fetch seasonality data')
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchSeasonalityData()
-    }, [selectedTicker, dateRange])
-
-    const handleFileUpload = async (file) => {
-        try {
-            setIsLoading(true)
-            const formData = new FormData()
-            formData.append('file', file)
-
-            const response = await axios.post(`${API_BASE_URL}/api/upload`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            })
-
-            if (response.data.success) {
-                toast.success(`File uploaded successfully! ${response.data.data.recordsProcessed} records processed.`)
-                // Refresh ticker data after upload
-                const tickerResponse = await axios.get(`${API_BASE_URL}/api/data/tickers`)
-                if (tickerResponse.data.success) {
-                    setTickers(tickerResponse.data.data)
-                }
-            }
-        } catch (error) {
-            console.error('Error uploading file:', error)
-            const errorMessage = error.response?.data?.message || 'Failed to upload file'
-            toast.error(errorMessage)
-        } finally {
-            setIsLoading(false)
-        }
+  const handleAnalysis = async () => {
+    if (!selectedSymbol) {
+      setError('Please select a symbol');
+      return;
     }
 
-    return (
-        <div className='container mx-auto px-4 py-8'>
-            <h1 className='text-3xl font-bold text-gray-800 mb-8'>Seasonality Analysis Dashboard</h1>
+    setLoading(true);
+    setError(null);
 
-            <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-                {/* File Upload Section */}
-                <div className='lg:col-span-1'>
-                    <div className='bg-white rounded-lg shadow-md p-6'>
-                        <h2 className='text-xl font-semibold text-gray-700 mb-4'>Upload CSV File</h2>
-                        <FileUpload onFileUpload={handleFileUpload} isLoading={isLoading} />
-                        <p className='text-sm text-gray-500 mt-4'>
-                            Upload your Seasonality.csv file. The system will process and store the data automatically.
-                        </p>
-                    </div>
+    try {
+      const response = await api.get('/analysis/seasonality', {
+        params: {
+          symbol: selectedSymbol,
+          timeframe: timeframe.toLowerCase(),
+          startDate: dateRange.startDate.toISOString().split('T')[0],
+          endDate: dateRange.endDate.toISOString().split('T')[0]
+        }
+      });
+
+      setAnalysisData(response.data.data);
+      setStatistics(response.data.statistics);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error fetching analysis data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTimeframeChange = (newTimeframe) => {
+    setTimeframe(newTimeframe);
+    // Auto-trigger analysis when timeframe changes
+    handleAnalysis();
+  };
+
+  return (
+    <Container fluid className="py-4">
+      <Row>
+        <Col>
+          <h1 className="mb-4">Seasonality Analysis Dashboard</h1>
+          
+          {error && (
+            <Alert variant="danger" onClose={() => setError(null)} dismissible>
+              {error}
+            </Alert>
+          )}
+        </Col>
+      </Row>
+
+      {/* Control Panel */}
+      <Card className="mb-4">
+        <Card.Body>
+          <Row>
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label>Select Symbol</Form.Label>
+                <TickerSelector
+                  value={selectedSymbol}
+                  onChange={setSelectedSymbol}
+                  onAnalysis={handleAnalysis}
+                />
+              </Form.Group>
+            </Col>
+            
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label>Select Timeframe</Form.Label>
+                <Form.Select
+                  value={timeframe}
+                  onChange={(e) => handleTimeframeChange(e.target.value)}
+                >
+                  {timeframeOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Select Date Range</Form.Label>
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={setDateRange}
+                />
+              </Form.Group>
+            </Col>
+
+            <Col md={2}>
+              <Form.Group>
+                <Form.Label>Actions</Form.Label>
+                <div className="d-grid">
+                  <Button 
+                    onClick={handleAnalysis}
+                    disabled={loading}
+                    variant="primary"
+                  >
+                    {loading ? (
+                      <>
+                        <Spinner size="sm" className="me-2" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      'Analyze Data'
+                    )}
+                  </Button>
                 </div>
+              </Form.Group>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
-                {/* Data Controls Section */}
-                <div className='lg:col-span-2'>
-                    <div className='bg-white rounded-lg shadow-md p-6'>
-                        <h2 className='text-xl font-semibold text-gray-700 mb-4'>Analysis Controls</h2>
+      {/* Statistics Overview */}
+      {statistics && (
+        <Row className="mb-4">
+          <Col md={2}>
+            <Card>
+              <Card.Body>
+                <Card.Title className="text-center">Total Records</Card.Title>
+                <h3 className="text-center text-primary">{statistics.totalRecords || 0}</h3>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={2}>
+            <Card>
+              <Card.Body>
+                <Card.Title className="text-center">Average Return</Card.Title>
+                <h3 className="text-center text-success">
+                  {statistics.averageReturn ? `${statistics.averageReturn.toFixed(2)}%` : 'N/A'}
+                </h3>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={2}>
+            <Card>
+              <Card.Body>
+                <Card.Title className="text-center">Win Rate</Card.Title>
+                <h3 className="text-center text-info">
+                  {statistics.winRate ? `${statistics.winRate.toFixed(1)}%` : 'N/A'}
+                </h3>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={2}>
+            <Card>
+              <Card.Body>
+                <Card.Title className="text-center">Max Gain</Card.Title>
+                <h3 className="text-center text-success">
+                  {statistics.maxGain ? `${statistics.maxGain.toFixed(2)}%` : 'N/A'}
+                </h3>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={2}>
+            <Card>
+              <Card.Body>
+                <Card.Title className="text-center">Max Loss</Card.Title>
+                <h3 className="text-center text-danger">
+                  {statistics.maxLoss ? `${statistics.maxLoss.toFixed(2)}%` : 'N/A'}
+                </h3>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={2}>
+            <Card>
+              <Card.Body>
+                <Card.Title className="text-center">Current Symbol</Card.Title>
+                <h3 className="text-center text-warning">{selectedSymbol}</h3>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
 
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-6'>
-                            <TickerSelector
-                                tickers={tickers}
-                                selectedTicker={selectedTicker}
-                                onTickerChange={setSelectedTicker}
-                                isLoading={isLoading}
-                            />
+      {/* Data Visualization */}
+      <Row>
+        <Col>
+          <DataVisualization
+            data={analysisData}
+            timeframe={timeframe}
+            symbol={selectedSymbol}
+            statistics={statistics}
+            loading={loading}
+          />
+        </Col>
+      </Row>
 
-                            <DateRangePicker
-                                dateRange={dateRange}
-                                onDateRangeChange={setDateRange}
-                                isLoading={isLoading}
-                            />
-                        </div>
+      {/* Timeframe Comparison */}
+      <Row className="mt-4">
+        <Col>
+          <Card>
+            <Card.Body>
+              <Card.Title>Timeframe Comparison</Card.Title>
+              <p className="text-muted">
+                Compare analysis results across different timeframes for {selectedSymbol}
+              </p>
+              <Row>
+                {timeframeOptions.map(option => (
+                  <Col md={2} key={option.value} className="mb-3">
+                    <Button
+                      variant={timeframe === option.value ? 'primary' : 'outline-primary'}
+                      onClick={() => handleTimeframeChange(option.value)}
+                      className="w-100"
+                    >
+                      {option.label}
+                    </Button>
+                  </Col>
+                ))}
+              </Row>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
 
-                        {isLoading ? (
-                            <div className='flex justify-center items-center h-32'>
-                                <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500'></div>
-                            </div>
-                        ) : seasonalityData.length > 0 ? (
-                            <DataVisualization data={seasonalityData} />
-                        ) : (
-                            <div className='text-center py-8 text-gray-500'>
-                                {selectedTicker
-                                    ? 'No data available for selected criteria'
-                                    : 'Select a ticker to view data'}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
+      {/* Quick Actions */}
+      {user?.role === 'admin' && (
+        <Row className="mt-4">
+          <Col>
+            <Card>
+              <Card.Body>
+                <Card.Title>Admin Actions</Card.Title>
+                <Row>
+                  <Col md={3}>
+                    <Button 
+                      href="/admin" 
+                      variant="warning" 
+                      className="w-100"
+                    >
+                      Go to Admin Panel
+                    </Button>
+                  </Col>
+                  <Col md={3}>
+                    <Button 
+                      variant="info" 
+                      className="w-100"
+                      onClick={() => window.location.reload()}
+                    >
+                      Refresh Data
+                    </Button>
+                  </Col>
+                  <Col md={3}>
+                    <Button 
+                      variant="secondary" 
+                      className="w-100"
+                      onClick={() => {
+                        setSelectedSymbol('RELIANCE');
+                        setTimeframe('DAILY');
+                        setDateRange({
+                          startDate: new Date(new Date().getFullYear(), 0, 1),
+                          endDate: new Date()
+                        });
+                        setAnalysisData(null);
+                        setStatistics(null);
+                      }}
+                    >
+                      Reset Filters
+                    </Button>
+                  </Col>
+                  <Col md={3}>
+                    <Button 
+                      variant="success" 
+                      className="w-100"
+                      onClick={handleAnalysis}
+                    >
+                      Re-analyze
+                    </Button>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
+    </Container>
+  );
 }
