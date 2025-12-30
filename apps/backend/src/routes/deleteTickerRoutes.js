@@ -2,7 +2,6 @@
  * Delete Ticker Routes
  * Handles deletion of ticker data from Ticker and SeasonalityData tables
  */
-
 const express = require('express')
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')

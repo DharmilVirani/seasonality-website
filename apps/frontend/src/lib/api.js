@@ -84,7 +84,34 @@ export const getTickers = () => {
 };
 
 export const getSeasonalityData = (tickerId, params = {}) => {
-  return api.get(`/api/data/ticker/${tickerId}`, { params });
+  return api.get(`/api/seasonality/${tickerId}`, { params });
+};
+
+export const getMultiTimeframeData = (tickerId, timeframes = []) => {
+  return api.get(`/api/seasonality/${tickerId}/multi-timeframe`, { 
+    params: { timeframes: timeframes.join(',') } 
+  });
+};
+
+export const getPoliticalCycleData = (tickerId, countries = []) => {
+  return api.get(`/api/seasonality/${tickerId}/political-cycle`, { 
+    params: { countries: countries.join(',') } 
+  });
+};
+
+export const getStatisticalAnalysis = (tickerId, tests = [], significanceLevel = 0.05) => {
+  return api.post(`/api/seasonality/${tickerId}/statistical`, {
+    tests,
+    significanceLevel
+  });
+};
+
+export const getBasketAnalysis = (basketId) => {
+  return api.get(`/api/seasonality/basket/${basketId}`);
+};
+
+export const getSeasonalitySummary = (tickerId) => {
+  return api.get(`/api/seasonality/${tickerId}/summary`);
 };
 
 export const getAggregateData = (params = {}) => {

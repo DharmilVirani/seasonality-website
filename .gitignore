@@ -58,3 +58,5 @@ minio-data/
 # Docker
 Dockerfile
 .dockerignore
+
+old_software/

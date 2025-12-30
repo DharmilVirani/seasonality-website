@@ -5,7 +5,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {s
+datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
@@ -19,6 +19,15 @@ model Ticker {
 
   // Relationship to seasonality data
   seasonalityData SeasonalityData[]
+  dailyData       DailySeasonalityData[]
+  mondayWeeklyData MondayWeeklySeasonalityData[]
+  expiryWeeklyData ExpiryWeeklySeasonalityData[]
+  monthlyData     MonthlySeasonalityData[]
+  yearlyData      YearlySeasonalityData[]
+  seasonalityPatterns SeasonalityPattern[]
+  basketItems     BasketItem[]
+  processedData   ProcessedData[]
+  statisticalCache StatisticalCache[]
 
   @@index([symbol])
 }
@@ -78,6 +87,500 @@ model User {
 // 4. All uploaded files merged into single "Seasonality" dataset
 // 5. Ticker symbols stored in Ticker table with auto-incrementing IDs
 // 6. SeasonalityData references ticker IDs instead of strings
+
+// =====================================================
+// ADVANCED SEASONALITY ANALYSIS MODELS
+// =====================================================
+
+// Time Frame Types for multi-timeframe analysis
+enum TimeFrame {
+  DAILY
+  MONDAY_WEEKLY
+  EXPIRY_WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// Political Cycles for election impact analysis
+model PoliticalCycle {
+  id        Int      @id @default(autoincrement())
+  name      String   // "US Presidential", "Indian General", etc.
+  country   String   // "USA", "INDIA", etc.
+  cycleType String   // "PRESIDENTIAL", "PARLIAMENTARY", etc.
+  startDate DateTime
+  endDate   DateTime
+  impactScore Float? // -1 to 1, negative/positive impact
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  processedData ProcessedData[]
+  
+  @@index([country, cycleType])
+  @@index([startDate, endDate])
+}
+
+// Special Days (Elections, Holidays, Events)
+// Enhanced version with detailed fields
+model SpecialDay {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  name        String   // "US Presidential Election", "Republic Day", etc.
+  type        String   // "ELECTION", "HOLIDAY", "EVENT", "BUDGET", "MONSOON", "FINANCIAL"
+  country     String   // "USA", "INDIA", "GLOBAL"
+  importance  Int      @default(1) // 1-5 scale
+  description String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  processedData ProcessedData[]
+  
+  @@index([date, country])
+  @@index([type])
+}
+
+// Basket Analysis - Predefined symbol groups from old software
+model Basket {
+  id          Int      @id @default(autoincrement())
+  name        String   // "All_Indices", "F&O_Indices", "Nifty_Indices", etc.
+  description String?
+  category    String   // "INDICES", "STOCKS", "COMMODITIES", etc.
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  basketItems BasketItem[]
+  
+  @@index([category])
+}
+
+// Individual items in baskets
+model BasketItem {
+  id        Int      @id @default(autoincrement())
+  basketId  Int
+  tickerId  Int
+  displayOrder Int   @default(0)
+  
+  basket    Basket   @relation(fields: [basketId], references: [id])
+  ticker    Ticker   @relation(fields: [tickerId], references: [id])
+  
+  @@unique([basketId, tickerId])
+  @@index([basketId])
+}
+
+// Multi-timeframe Processed Data
+model ProcessedData {
+  id            Int      @id @default(autoincrement())
+  
+  // Original data reference
+  tickerId      Int
+  originalDate  DateTime // Original date from source data
+  
+  // Time frame specific data
+  timeFrame     TimeFrame
+  processedDate DateTime // Date for this timeframe (e.g., Monday for weekly)
+  
+  // OHLCV data
+  open          Float
+  high          Float
+  low           Float
+  close         Float
+  volume        Float    @default(0)
+  openInterest  Float    @default(0)
+  
+  // Statistical calculations
+  returns       Float?   // Period return percentage
+  volatility    Float?   // Volatility for this period
+  
+  // Seasonality analysis
+  monthOfYear   Int?     // 1-12
+  dayOfWeek     Int?     // 0-6 (Sunday = 0)
+  weekOfYear    Int?     // 1-52
+  quarter       Int?     // 1-4
+  
+  // Political cycle impact
+  politicalCycleId Int?
+  politicalImpact  Float? // -1 to 1 impact score
+  
+  // Special days proximity
+  daysToSpecialDay Int?  // Days until next special day
+  specialDayId     Int?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  ticker        Ticker         @relation(fields: [tickerId], references: [id])
+  politicalCycle PoliticalCycle? @relation(fields: [politicalCycleId], references: [id])
+  specialDay     SpecialDay?    @relation(fields: [specialDayId], references: [id])
+  
+  @@index([tickerId, timeFrame])
+  @@index([processedDate, timeFrame])
+  @@index([timeFrame, monthOfYear])
+  @@index([politicalCycleId])
+  @@unique([tickerId, processedDate, timeFrame])
+}
+
+// Daily Seasonality Data - Enhanced daily data with all calculations
+model DailySeasonalityData {
+  id                    Int      @id @default(autoincrement())
+  tickerId              Int
+  date                  DateTime @db.Date
+  
+  // OHLCV Data
+  open                  Float
+  high                  Float
+  low                   Float
+  close                 Float
+  volume                Float
+  openInterest          Float
+  weekday               String   // Monday, Tuesday, etc.
+  
+  // Calendar Day Calculations
+  calendarMonthDay      Int      // 1-31
+  calendarYearDay       Int      // 1-366
+  
+  // Trading Day Calculations
+  tradingMonthDay       Int?     // 1-31 (sequential trading days)
+  tradingYearDay        Int?     // 1-366 (sequential trading days)
+  
+  // Even/Odd Classifications
+  evenCalendarMonthDay  Boolean
+  evenCalendarYearDay   Boolean
+  evenTradingMonthDay   Boolean?
+  evenTradingYearDay    Boolean?
+  
+  // Return Calculations
+  returnPoints          Float?
+  returnPercentage      Float?
+  positiveDay           Boolean?
+  
+  // Cross-timeframe linkages
+  mondayWeeklyDate      DateTime?
+  expiryWeeklyDate      DateTime?
+  
+  // Monday Weekly Integration
+  mondayWeekNumberMonthly  Int?
+  mondayWeekNumberYearly   Int?
+  evenMondayWeekNumberMonthly Boolean?
+  evenMondayWeekNumberYearly  Boolean?
+  mondayWeeklyReturnPoints   Float?
+  mondayWeeklyReturnPercentage Float?
+  positiveMondayWeek        Boolean?
+  
+  // Expiry Weekly Integration
+  expiryWeekNumberMonthly  Int?
+  expiryWeekNumberYearly   Int?
+  evenExpiryWeekNumberMonthly Boolean?
+  evenExpiryWeekNumberYearly  Boolean?
+  expiryWeeklyReturnPoints   Float?
+  expiryWeeklyReturnPercentage Float?
+  positiveExpiryWeek        Boolean?
+  
+  // Monthly Integration
+  evenMonth              Boolean?
+  monthlyReturnPoints    Float?
+  monthlyReturnPercentage Float?
+  positiveMonth          Boolean?
+  
+  // Yearly Integration
+  evenYear               Boolean?
+  yearlyReturnPoints     Float?
+  yearlyReturnPercentage Float?
+  positiveYear           Boolean?
+  
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  
+  ticker                 Ticker   @relation(fields: [tickerId], references: [id])
+  
+  @@unique([tickerId, date])
+  @@index([tickerId, date])
+  @@index([date])
+  @@index([weekday])
+  @@index([evenYear])
+  @@index([evenMonth])
+}
+
+// Monday Weekly Seasonality Data
+model MondayWeeklySeasonalityData {
+  id                      Int      @id @default(autoincrement())
+  tickerId                Int
+  date                    DateTime @db.Date
+  
+  // OHLCV Data
+  open                    Float
+  high                    Float
+  low                     Float
+  close                   Float
+  volume                  Float
+  openInterest            Float
+  weekday                 String
+  
+  // Week Numbering
+  weekNumberMonthly       Int?     // 1-5 (sequential within month)
+  weekNumberYearly        Int?     // 1-52 (sequential within year)
+  evenWeekNumberMonthly   Boolean?
+  evenWeekNumberYearly    Boolean?
+  
+  // Return Calculations
+  returnPoints            Float?
+  returnPercentage        Float?
+  positiveWeek            Boolean?
+  
+  // Monthly Integration
+  evenMonth               Boolean?
+  monthlyReturnPoints     Float?
+  monthlyReturnPercentage Float?
+  positiveMonth           Boolean?
+  
+  // Yearly Integration
+  evenYear                Boolean?
+  yearlyReturnPoints      Float?
+  yearlyReturnPercentage  Float?
+  positiveYear            Boolean?
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  ticker                  Ticker   @relation(fields: [tickerId], references: [id])
+  
+  @@unique([tickerId, date])
+  @@index([tickerId, date])
+  @@index([weekNumberMonthly])
+  @@index([weekNumberYearly])
+}
+
+// Expiry Weekly Seasonality Data
+model ExpiryWeeklySeasonalityData {
+  id                      Int      @id @default(autoincrement())
+  tickerId                Int
+  date                    DateTime @db.Date
+  startDate               DateTime? // For expiry week start
+  
+  // OHLCV Data
+  open                    Float
+  high                    Float
+  low                     Float
+  close                   Float
+  volume                  Float
+  openInterest            Float
+  weekday                 String
+  
+  // Week Numbering
+  weekNumberMonthly       Int?     // 1-5 (sequential within month)
+  weekNumberYearly        Int?     // 1-52 (sequential within year)
+  evenWeekNumberMonthly   Boolean?
+  evenWeekNumberYearly    Boolean?
+  
+  // Return Calculations
+  returnPoints            Float?
+  returnPercentage        Float?
+  positiveWeek            Boolean?
+  
+  // Monthly Integration
+  evenMonth               Boolean?
+  monthlyReturnPoints     Float?
+  monthlyReturnPercentage Float?
+  positiveMonth           Boolean?
+  
+  // Yearly Integration
+  evenYear                Boolean?
+  yearlyReturnPoints      Float?
+  yearlyReturnPercentage  Float?
+  positiveYear            Boolean?
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  ticker                  Ticker   @relation(fields: [tickerId], references: [id])
+  
+  @@unique([tickerId, date])
+  @@index([tickerId, date])
+  @@index([weekNumberMonthly])
+  @@index([weekNumberYearly])
+}
+
+// Monthly Seasonality Data
+model MonthlySeasonalityData {
+  id                    Int      @id @default(autoincrement())
+  tickerId              Int
+  date                  DateTime @db.Date
+  
+  // OHLCV Data
+  open                  Float
+  high                  Float
+  low                   Float
+  close                 Float
+  volume                Float
+  openInterest          Float
+  weekday               String
+  
+  // Even/Odd Classifications
+  evenMonth             Boolean
+  
+  // Return Calculations
+  returnPoints          Float?
+  returnPercentage      Float?
+  positiveMonth         Boolean?
+  
+  // Yearly Integration
+  evenYear              Boolean?
+  yearlyReturnPoints    Float?
+  yearlyReturnPercentage Float?
+  positiveYear          Boolean?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  ticker                Ticker   @relation(fields: [tickerId], references: [id])
+  
+  @@unique([tickerId, date])
+  @@index([tickerId, date])
+  @@index([evenMonth])
+}
+
+// Yearly Seasonality Data
+model YearlySeasonalityData {
+  id                    Int      @id @default(autoincrement())
+  tickerId              Int
+  date                  DateTime @db.Date
+  
+  // OHLCV Data
+  open                  Float
+  high                  Float
+  low                   Float
+  close                 Float
+  volume                Float
+  openInterest          Float
+  weekday               String
+  
+  // Even/Odd Classifications
+  evenYear              Boolean
+  
+  // Return Calculations
+  returnPoints          Float?
+  returnPercentage      Float?
+  positiveYear          Boolean?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  ticker                Ticker   @relation(fields: [tickerId], references: [id])
+  
+  @@unique([tickerId, date])
+  @@index([tickerId, date])
+  @@index([evenYear])
+}
+
+// Election Year Analysis - Enhanced from old software
+model ElectionYear {
+  id          Int      @id @default(autoincrement())
+  year        Int
+  country     String   // "USA", "INDIA", etc.
+  electionType String  // "PRESIDENTIAL", "PARLIAMENTARY", etc.
+  
+  // Election phases
+  isPreElectionYear Boolean @default(false)
+  isMidElectionYear Boolean @default(false)
+  isPostElectionYear Boolean @default(false)
+  isModiYear         Boolean @default(false) // Special case for India
+  isBudgetYear       Boolean @default(false) // Indian budget year
+  
+  // Election dates
+  electionDate DateTime?
+  budgetDate   DateTime? // For Indian budget
+  
+  // Political context
+  rulingParty  String?
+  oppositionParty String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([year, country])
+  @@index([country, electionType])
+}
+
+// Seasonality Patterns (aggregated analysis)
+model SeasonalityPattern {
+  id          Int      @id @default(autoincrement())
+  tickerId    Int
+  timeFrame   TimeFrame
+  
+  // Pattern identification
+  patternType String   // "MONTHLY_SEASONAL", "WEEKLY_SEASONAL", "POLITICAL_CYCLE", "STREAK", "BEST_PERFORMER"
+  period      Int?     // Month (1-12), Day of week (0-6), etc.
+  
+  // Statistical measures
+  avgReturn   Float    // Average return for this period
+  volatility  Float    // Volatility for this period
+  winRate     Float    // Percentage of positive returns
+  maxGain     Float    // Maximum gain observed
+  maxLoss     Float    // Maximum loss observed
+  
+  // Streak analysis (from old software)
+  currentStreak      Int?  // Current consecutive positive/negative streak
+  longestStreak     Int?  // Longest streak observed
+  streakType         String? // "POSITIVE" or "NEGATIVE"
+  
+  // Reliability metrics
+  sampleSize  Int      // Number of observations
+  confidence  Float    // Statistical confidence (0-1)
+  significance Float   // P-value or significance score
+  
+  // Analysis metadata
+  analysisDate DateTime @default(now())
+  dataRangeStart DateTime
+  dataRangeEnd   DateTime
+  
+  ticker      Ticker   @relation(fields: [tickerId], references: [id])
+  
+  @@index([tickerId, timeFrame, patternType])
+  @@index([patternType, period])
+}
+
+// Market Phenomena (Black Monday, COVID crash, etc.)
+model MarketPhenomenon {
+  id          Int      @id @default(autoincrement())
+  name        String   // "Black Monday 1987", "COVID Crash 2020", etc.
+  startDate   DateTime
+  endDate     DateTime?
+  description String?
+  severity    Int      @default(1) // 1-5 scale
+  
+  // Impact analysis
+  avgMarketReturn Float? // Average market impact
+  affectedTickers  Int?  // Number of tickers affected
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([startDate, endDate])
+}
+
+// Statistical Analysis Cache - For performance optimization
+model StatisticalCache {
+  id          Int      @id @default(autoincrement())
+  tickerId    Int
+  timeFrame   TimeFrame
+  analysisType String  // "BEST_MONTHLY", "STREAK_ANALYSIS", etc.
+  
+  // Cached results
+  resultData  String   // JSON string with cached results
+  parameters  String?  // JSON string with analysis parameters
+  
+  // Cache metadata
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  
+  ticker      Ticker   @relation(fields: [tickerId], references: [id])
+  
+  @@index([tickerId, timeFrame, analysisType])
+  @@index([expiresAt])
+  @@unique([tickerId, timeFrame, analysisType])
+}
 
 // =====================================================
 // BULK CSV PROCESSING MODELS
