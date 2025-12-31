@@ -5,9 +5,6 @@
  * Run this as a separate process: node src/services/csvProcessorWorker.js
  */
 
-// Load environment variables FIRST
-require('dotenv').config();
-
 const fs = require('fs');
 const path = require('path');
 const Bull = require('bull');
@@ -27,25 +24,11 @@ if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
 
-// Create Bull queue with better error handling
+// Create Bull queue
 const processingQueue = new Bull('csv-processing', {
     redis: {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT) || 6379,
-        retryStrategy: (times) => {
-            if (times > 3) {
-                console.error('❌ Redis connection failed after 3 retries');
-                return null; // Stop retrying
-            }
-            const delay = Math.min(times * 50, 2000);
-            return delay;
-        },
-        maxRetriesPerRequest: 3,
-    },
-    settings: {
-        lockDuration: 300000, // 5 minutes
-        stalledInterval: 300000, // 5 minutes
-        maxStalledCount: 1,
     },
 });
 
@@ -64,9 +47,9 @@ function parseDate(dateStr) {
     if (!dateStr || dateStr.trim() === '') {
         throw new Error('Empty date value');
     }
-
+    
     const trimmed = dateStr.trim();
-
+    
     // Handle dd-mm-yyyy format (e.g., 24-12-2024)
     const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
     if (ddmmyyyyMatch) {
@@ -76,7 +59,7 @@ function parseDate(dateStr) {
             return date;
         }
     }
-
+    
     // Handle dd/mm/yyyy format (e.g., 24/12/2024)
     const ddmmyyyySlashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (ddmmyyyySlashMatch) {
@@ -86,7 +69,7 @@ function parseDate(dateStr) {
             return date;
         }
     }
-
+    
     // Handle yyyy-mm-dd format (ISO format)
     const yyyymmddMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (yyyymmddMatch) {
@@ -96,13 +79,13 @@ function parseDate(dateStr) {
             return date;
         }
     }
-
+    
     // Fallback: try standard JavaScript Date parsing
     const date = new Date(trimmed);
     if (!isNaN(date.getTime())) {
         return date;
     }
-
+    
     throw new Error(`Unable to parse date: "${dateStr}" (expected format: dd-mm-yyyy)`);
 }
 
@@ -150,12 +133,12 @@ function normalizeColumnNames(headers) {
  */
 function detectDelimiter(content) {
     const firstLine = content.split('\n')[0];
-
+    
     // Count occurrences of common delimiters
     const tabCount = (firstLine.match(/\t/g) || []).length;
     const commaCount = (firstLine.match(/,/g) || []).length;
     const semicolonCount = (firstLine.match(/;/g) || []).length;
-
+    
     // Return the most common delimiter
     if (tabCount > commaCount && tabCount > semicolonCount) {
         return '\t';
@@ -174,11 +157,11 @@ async function processCSVFile(filePath, batchId, fileId) {
     try {
         // Read and parse CSV file
         const fileContent = fs.readFileSync(filePath, 'utf-8');
-
+        
         // Detect delimiter
         const delimiter = detectDelimiter(fileContent);
         console.log(`Detected delimiter: ${delimiter === '\t' ? 'TAB' : delimiter === ',' ? 'COMMA' : 'SEMICOLON'}`);
-
+        
         const parsed = parse(fileContent, {
             columns: false,
             skip_empty_lines: true,
@@ -249,7 +232,7 @@ async function processCSVFile(filePath, batchId, fileId) {
         const seasonalityData = records.map((row, index) => {
             try {
                 const date = parseDate(row.date);
-
+                
                 return {
                     date,
                     tickerId: tickerMap[row.ticker],
@@ -440,23 +423,11 @@ processingQueue.on('failed', (job, error) => {
 });
 
 processingQueue.on('error', (error) => {
-    // Only log critical errors, ignore connection warnings
-    if (error.code !== 'ECONNREFUSED' && error.code !== 'ETIMEDOUT') {
-        console.error('[QUEUE ERROR]', error.message);
-    }
+    console.error('[QUEUE ERROR]', error.message);
 });
 
 processingQueue.on('stalled', (job) => {
     console.warn(`[STALLED] Job ${job.id} - may need manual intervention`);
-});
-
-// Connection status
-processingQueue.on('ready', () => {
-    console.log('✅ Redis connection established successfully');
-});
-
-processingQueue.on('reconnecting', () => {
-    console.log('🔄 Reconnecting to Redis...');
 });
 
 // Progress logging

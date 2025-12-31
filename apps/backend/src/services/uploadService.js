@@ -207,8 +207,8 @@ class UploadService {
                 return result
             },
             {
-                maxWait: 30000, 
-                timeout: 120000, 
+                maxWait: 30000, // Maximum time to wait for transaction to start (30 seconds)
+                timeout: 120000, // Maximum time for transaction to complete (120 seconds)
             }
         )
     }
