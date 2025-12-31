@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { toast } from 'react-toastify'
-import FileUpload from '../components/FileUpload'
 import DataVisualization from '../components/DataVisualization'
 import TickerSelector from '../components/TickerSelector'
 import DateRangePicker from '../components/DateRangePicker'
@@ -72,35 +71,6 @@ export default function Home() {
         fetchSeasonalityData()
     }, [selectedTicker, dateRange])
 
-    const handleFileUpload = async (file) => {
-        try {
-            setIsLoading(true)
-            const formData = new FormData()
-            formData.append('file', file)
-
-            const response = await axios.post(`${API_BASE_URL}/api/upload`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            })
-
-            if (response.data.success) {
-                toast.success(`File uploaded successfully! ${response.data.data.recordsProcessed} records processed.`)
-                // Refresh ticker data after upload
-                const tickerResponse = await axios.get(`${API_BASE_URL}/api/data/tickers`)
-                if (tickerResponse.data.success) {
-                    setTickers(tickerResponse.data.data)
-                }
-            }
-        } catch (error) {
-            console.error('Error uploading file:', error)
-            const errorMessage = error.response?.data?.message || 'Failed to upload file'
-            toast.error(errorMessage)
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
     return (
         <div className='container mx-auto px-4 py-8'>
             <h1 className='text-3xl font-bold text-gray-800 mb-8'>Seasonality Analysis Dashboard</h1>
@@ -110,7 +80,6 @@ export default function Home() {
                 <div className='lg:col-span-1'>
                     <div className='bg-white rounded-lg shadow-md p-6'>
                         <h2 className='text-xl font-semibold text-gray-700 mb-4'>Upload CSV File</h2>
-                        <FileUpload onFileUpload={handleFileUpload} isLoading={isLoading} />
                         <p className='text-sm text-gray-500 mt-4'>
                             Upload your Seasonality.csv file. The system will process and store the data automatically.
                         </p>
