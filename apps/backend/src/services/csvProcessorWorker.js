@@ -64,9 +64,9 @@ function parseDate(dateStr) {
     if (!dateStr || dateStr.trim() === '') {
         throw new Error('Empty date value');
     }
-    
+
     const trimmed = dateStr.trim();
-    
+
     // Handle dd-mm-yyyy format (e.g., 24-12-2024)
     const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
     if (ddmmyyyyMatch) {
@@ -76,7 +76,7 @@ function parseDate(dateStr) {
             return date;
         }
     }
-    
+
     // Handle dd/mm/yyyy format (e.g., 24/12/2024)
     const ddmmyyyySlashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (ddmmyyyySlashMatch) {
@@ -86,7 +86,7 @@ function parseDate(dateStr) {
             return date;
         }
     }
-    
+
     // Handle yyyy-mm-dd format (ISO format)
     const yyyymmddMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (yyyymmddMatch) {
@@ -96,13 +96,13 @@ function parseDate(dateStr) {
             return date;
         }
     }
-    
+
     // Fallback: try standard JavaScript Date parsing
     const date = new Date(trimmed);
     if (!isNaN(date.getTime())) {
         return date;
     }
-    
+
     throw new Error(`Unable to parse date: "${dateStr}" (expected format: dd-mm-yyyy)`);
 }
 
@@ -150,12 +150,12 @@ function normalizeColumnNames(headers) {
  */
 function detectDelimiter(content) {
     const firstLine = content.split('\n')[0];
-    
+
     // Count occurrences of common delimiters
     const tabCount = (firstLine.match(/\t/g) || []).length;
     const commaCount = (firstLine.match(/,/g) || []).length;
     const semicolonCount = (firstLine.match(/;/g) || []).length;
-    
+
     // Return the most common delimiter
     if (tabCount > commaCount && tabCount > semicolonCount) {
         return '\t';
@@ -174,11 +174,11 @@ async function processCSVFile(filePath, batchId, fileId) {
     try {
         // Read and parse CSV file
         const fileContent = fs.readFileSync(filePath, 'utf-8');
-        
+
         // Detect delimiter
         const delimiter = detectDelimiter(fileContent);
         console.log(`Detected delimiter: ${delimiter === '\t' ? 'TAB' : delimiter === ',' ? 'COMMA' : 'SEMICOLON'}`);
-        
+
         const parsed = parse(fileContent, {
             columns: false,
             skip_empty_lines: true,
@@ -249,7 +249,7 @@ async function processCSVFile(filePath, batchId, fileId) {
         const seasonalityData = records.map((row, index) => {
             try {
                 const date = parseDate(row.date);
-                
+
                 return {
                     date,
                     tickerId: tickerMap[row.ticker],
@@ -452,11 +452,11 @@ processingQueue.on('stalled', (job) => {
 
 // Connection status
 processingQueue.on('ready', () => {
-    console.log('Redis connection established successfully');
+    console.log('✅ Redis connection established successfully');
 });
 
 processingQueue.on('reconnecting', () => {
-    console.log('Reconnecting to Redis...');
+    console.log('🔄 Reconnecting to Redis...');
 });
 
 // Progress logging
@@ -491,7 +491,6 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 // Start worker
-
 console.log(`========================================`);
 console.log(`CSV Processor Worker Started`);
 console.log(`Concurrency: ${CONCURRENCY}`);
