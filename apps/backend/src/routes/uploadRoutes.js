@@ -44,9 +44,9 @@ function parseDate(dateStr) {
     if (!dateStr || dateStr.trim() === '') {
         throw new Error('Empty date value');
     }
-    
+
     const trimmed = dateStr.trim();
-    
+
     // Handle dd-mm-yyyy format (e.g., 24-12-2024)
     const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
     if (ddmmyyyyMatch) {
@@ -56,7 +56,7 @@ function parseDate(dateStr) {
             return date;
         }
     }
-    
+
     // Handle dd/mm/yyyy format (e.g., 24/12/2024)
     const ddmmyyyySlashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (ddmmyyyySlashMatch) {
@@ -66,7 +66,7 @@ function parseDate(dateStr) {
             return date;
         }
     }
-    
+
     // Handle yyyy-mm-dd format (ISO format)
     const yyyymmddMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (yyyymmddMatch) {
@@ -76,13 +76,13 @@ function parseDate(dateStr) {
             return date;
         }
     }
-    
+
     // Fallback: try standard JavaScript Date parsing
     const date = new Date(trimmed);
     if (!isNaN(date.getTime())) {
         return date;
     }
-    
+
     throw new Error(`Unable to parse date: "${dateStr}" (expected format: dd-mm-yyyy)`);
 }
 
@@ -141,20 +141,20 @@ router.post('/', upload.single('file'), async (req, res, next) => {
  */
 async function processSingleFile(file) {
     const csvContent = file.buffer.toString('utf-8');
-    
+
     // Detect delimiter (tab, comma, or semicolon)
     const firstLine = csvContent.split('\n')[0];
     const tabCount = (firstLine.match(/\t/g) || []).length;
     const commaCount = (firstLine.match(/,/g) || []).length;
     const semicolonCount = (firstLine.match(/;/g) || []).length;
-    
+
     let delimiter = ',';
     if (tabCount > commaCount && tabCount > semicolonCount) {
         delimiter = '\t';
     } else if (semicolonCount > commaCount) {
         delimiter = ';';
     }
-    
+
     const rows = csvContent.split('\n').filter(row => row.trim());
     const headerRow = rows[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
 
@@ -196,7 +196,7 @@ async function processSingleFile(file) {
     const seasonalityData = data.map((row, index) => {
         try {
             const date = parseDate(row.date);
-            
+
             return {
                 date,
                 tickerId: tickerMap[row.ticker],

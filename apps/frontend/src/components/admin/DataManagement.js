@@ -1,282 +1,239 @@
-'use client'
 
-import { useState, useEffect } from 'react'
-import axios from 'axios'
-import { toast } from 'react-toastify'
-import { FaTrash, FaSyncAlt, FaDownload, FaSearch, FaUpload, FaFolderOpen } from 'react-icons/fa'
-import BulkUpload from '../BulkUpload'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import {
+    Search, Download, Trash2, Eye, RefreshCcw,
+    UploadCloud, FolderSearch, AlertTriangle, X,
+    Calendar, Info, Loader2, PlusCircle
+} from 'lucide-react';
+import { showToast } from '@/components/admin/Toast.js';
+import { BulkUpload } from '@/components/BulkUpload.js';
 
-export default function DataManagement() {
-    const [tickData, setTickData] = useState([])
-    const [isLoading, setIsLoading] = useState(false)
-    const [searchTerm, setSearchTerm] = useState('')
-    const [selectedTicker, setSelectedTicker] = useState(null)
-    const [tickerToDelete, setTickerToDelete] = useState(null)
-    const [deletePreview, setDeletePreview] = useState(null)
-    const [isLoadingPreview, setIsLoadingPreview] = useState(false)
-    const [activeTab, setActiveTab] = useState('upload') // 'upload' | 'browse'
-    const [batches, setBatches] = useState([])
-    const [isLoadingBatches, setIsLoadingBatches] = useState(false)
+const API_BASE_URL = 'http://localhost:3001';
 
-    // API base URL
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+export const DataManagement = ({ onUpload }) => {
+    const [tickData, setTickData] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedTicker, setSelectedTicker] = useState(null);
+    const [deletePreview, setDeletePreview] = useState(null);
+    const [activeTab, setActiveTab] = useState('upload'); // 'browse' | 'upload'
 
-    // Fetch ticker data
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setIsLoading(true)
-                const response = await axios.get(`${API_BASE_URL}/api/data/tickers`)
-                if (response.data.success) {
-                    setTickData(response.data.data)
-                }
-            } catch (error) {
-                console.error('Error fetching ticker data:', error)
-                toast.error('Failed to fetch ticker data')
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchData()
-    }, [])
-
-    // Fetch batches when browse tab is active
-    useEffect(() => {
-        if (activeTab === 'browse') {
-            fetchBatches()
-        }
-    }, [activeTab])
-
-    const fetchBatches = async () => {
+    const fetchData = async () => {
         try {
-            setIsLoadingBatches(true)
-            const response = await axios.get(`${API_BASE_URL}/api/upload/bulk`)
+            setIsLoading(true);
+            const response = await axios.get(`${API_BASE_URL}/api/data/tickers`);
             if (response.data.success) {
-                setBatches(response.data.data.batches)
+                setTickData(response.data.data);
             }
         } catch (error) {
-            console.error('Error fetching batches:', error)
+            console.error('Error fetching ticker data:', error);
+            showToast('error', 'Failed to fetch ticker data');
         } finally {
-            setIsLoadingBatches(false)
+            setIsLoading(false);
         }
-    }
+    };
 
-    const filteredData = tickData.filter((ticker) => ticker.symbol.toLowerCase().includes(searchTerm.toLowerCase()))
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const handleDeletePreview = async (ticker) => {
         try {
-            setIsLoadingPreview(true)
-            const response = await axios.get(`${API_BASE_URL}/api/ticker/${ticker.id}/preview`)
+            setIsLoading(true);
+            const response = await axios.get(`${API_BASE_URL}/api/ticker/${ticker.id}/preview`);
             if (response.data.success) {
-                setDeletePreview(response.data.data)
-                setTickerToDelete(ticker)
+                setDeletePreview({ ...response.data.data, ticker });
             }
         } catch (error) {
-            console.error('Error getting delete preview:', error)
-            toast.error('Failed to load deletion preview')
+            showToast('error', 'Failed to load deletion preview');
         } finally {
-            setIsLoadingPreview(false)
+            setIsLoading(false);
         }
-    }
+    };
 
     const handleDeleteConfirm = async () => {
-        if (!tickerToDelete) return
-
+        if (!deletePreview?.ticker) return;
         try {
-            setIsLoading(true)
-            const response = await axios.delete(`${API_BASE_URL}/api/ticker/${tickerToDelete.id}`)
+            setIsLoading(true);
+            const response = await axios.delete(`${API_BASE_URL}/api/ticker/${deletePreview.ticker.id}`);
             if (response.data.success) {
-                toast.success(`Ticker ${tickerToDelete.symbol} deleted successfully`)
-                setTickerToDelete(null)
-                setDeletePreview(null)
-                handleRefresh()
+                showToast('success', `Ticker ${deletePreview.ticker.symbol} deleted successfully`);
+                setDeletePreview(null);
+                fetchData();
             }
         } catch (error) {
-            console.error('Error deleting ticker:', error)
-            const errorMessage = error.response?.data?.message || 'Failed to delete ticker'
-            toast.error(errorMessage)
+            showToast('error', error.response?.data?.message || 'Failed to delete ticker');
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }
+    };
 
-    const handleDelete = async (ticker) => {
-        // Show preview first
-        await handleDeletePreview(ticker)
-    }
-
-    const handleRefresh = async () => {
-        try {
-            setIsLoading(true)
-            const response = await axios.get(`${API_BASE_URL}/api/data/tickers`)
-            if (response.data.success) {
-                setTickData(response.data.data)
-                toast.success('Data refreshed successfully')
-            }
-        } catch (error) {
-            console.error('Error refreshing data:', error)
-            toast.error('Failed to refresh data')
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    const handleExport = () => {
-        // This would be implemented with actual export functionality
-        toast.info('Export functionality would be implemented here')
-    }
-
-    const handleUploadComplete = (batchData) => {
-        toast.success(`Batch ${batchData.batchId} completed! ${batchData.processedFiles} files processed.`)
-        if (batchData.failedFiles > 0) {
-            toast.warn(`${batchData.failedFiles} files failed.`)
-        }
-        // Refresh ticker data
-        handleRefresh()
-    }
-
-    const formatDate = (dateString) => {
-        if (!dateString) return '-'
-        return new Date(dateString).toLocaleString()
-    }
-
-    const getStatusBadge = (status) => {
-        const badges = {
-            PENDING: 'bg-yellow-100 text-yellow-800',
-            PROCESSING: 'bg-blue-100 text-blue-800',
-            COMPLETED: 'bg-green-100 text-green-800',
-            FAILED: 'bg-red-100 text-red-800',
-            PARTIAL: 'bg-orange-100 text-orange-800',
-        }
-        return badges[status] || 'bg-gray-100 text-gray-800'
-    }
+    const filteredData = tickData.filter((ticker) =>
+        ticker.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
-        <div>
-            {/* Tab Navigation */}
-            <div className='flex border-b border-gray-200 mb-6'>
-                <button
-                    onClick={() => setActiveTab('upload')}
-                    className={`flex items-center px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-                        activeTab === 'upload'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                >
-                    <FaUpload className='mr-2' />
-                    Upload Data
-                </button>
-                <button
-                    onClick={() => setActiveTab('browse')}
-                    className={`flex items-center px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-                        activeTab === 'browse'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                >
-                    <FaFolderOpen className='mr-2' />
-                    Browse Data
-                </button>
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Primary Action Switcher */}
+            <div className="flex flex-col md:flex-row items-center justify-between border-b border-slate-100 pb-6 gap-4">
+                <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-fit shadow-inner">
+                    <button
+                        onClick={() => setActiveTab('upload')}
+                        className={`flex-1 md:flex-none flex items-center justify-center space-x-2 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'upload'
+                            ? 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5'
+                            : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                    >
+                        <UploadCloud className="w-5 h-5" />
+                        <span>Upload Files</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('browse')}
+                        className={`flex-1 md:flex-none flex items-center justify-center space-x-2 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'browse'
+                            ? 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5'
+                            : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                    >
+                        <FolderSearch className="w-5 h-5" />
+                        <span>Explore Inventory</span>
+                    </button>
+
+                </div>
+
+                {activeTab === 'browse' && (
+                    <button
+                        onClick={() => setActiveTab('upload')}
+                        className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-all group"
+                    >
+                        <PlusCircle className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                        <span>Quick Upload</span>
+                    </button>
+                )}
             </div>
 
-            {/* Tab Content */}
             {activeTab === 'upload' ? (
-                <div>
-                    <BulkUpload onUploadComplete={handleUploadComplete} />
+                <div className="max-w-4xl mx-auto py-4">
+                    <BulkUpload onUploadComplete={() => {
+                        showToast('success', 'Files processed successfully');
+                        setActiveTab('browse');
+                        fetchData();
+                    }} />
                 </div>
             ) : (
-                <div>
-                    {/* Header */}
-                    <div className='flex flex-wrap justify-between items-center mb-6'>
-                        <h3 className='text-xl font-semibold text-gray-700'>Data Management</h3>
-                        <div className='flex space-x-2'>
-                            <button
-                                onClick={handleRefresh}
-                                className='btn-secondary flex items-center'
-                                disabled={isLoading}
-                            >
-                                <FaSyncAlt className='mr-2' />
-                                Refresh
-                            </button>
-                            <button onClick={handleExport} className='btn-secondary flex items-center'>
-                                <FaDownload className='mr-2' />
-                                Export
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Search */}
-                    <div className='mb-4'>
-                        <div className='relative'>
-                            <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-                                <FaSearch className='text-gray-400' />
-                            </div>
+                <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="relative flex-1 max-w-lg">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
-                                type='text'
-                                placeholder='Search tickers...'
-                                className='form-input pl-10'
+                                type="text"
+                                placeholder="Search by ticker (e.g. AAPL, BTC)..."
+                                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
+
+                        <div className="flex items-center space-x-2">
+                            <button
+                                onClick={fetchData}
+                                title="Refresh Data"
+                                className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all text-slate-600 shadow-sm hover:shadow-md"
+                            >
+                                <RefreshCcw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                            <button className="flex items-center space-x-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm hover:shadow-md">
+                                <Download className="w-5 h-5" />
+                                <span>Download Report</span>
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Data Table */}
-                    <div className='overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200'>
-                        <table className='w-full'>
-                            <thead className='bg-gray-50'>
-                                <tr>
-                                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                                        Ticker Symbol
-                                    </th>
-                                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                                        Data Points
-                                    </th>
-                                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                                        Last Updated
-                                    </th>
-                                    <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                                        Actions
-                                    </th>
+                    <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl shadow-slate-200/50">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/80">
+                                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Asset Name</th>
+                                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Engine Status</th>
+                                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Latest Sync</th>
+                                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className='bg-white divide-y divide-gray-200'>
-                                {filteredData.length > 0 ? (
+                            <tbody className="divide-y divide-slate-50">
+                                {isLoading && filteredData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-8 py-32 text-center">
+                                            <div className="flex flex-col items-center space-y-4">
+                                                <div className="p-4 bg-indigo-50 rounded-full">
+                                                    <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+                                                </div>
+                                                <p className="text-base font-bold text-slate-900">Synchronizing database...</p>
+                                                <p className="text-sm text-slate-400">This may take a few seconds depending on network load.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : filteredData.length > 0 ? (
                                     filteredData.map((ticker) => (
-                                        <tr key={ticker.id}>
-                                            <td className='px-6 py-4 whitespace-nowrap'>
-                                                <div className='text-sm font-medium text-gray-900'>{ticker.symbol}</div>
-                                            </td>
-                                            <td className='px-6 py-4 whitespace-nowrap'>
-                                                <div className='text-sm text-gray-500'>-</div>
-                                            </td>
-                                            <td className='px-6 py-4 whitespace-nowrap'>
-                                                <div className='text-sm text-gray-500'>
-                                                    {formatDate(ticker.updatedAt)}
+                                        <tr key={ticker.id} className="hover:bg-indigo-50/40 transition-colors group">
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm border border-indigo-100 group-hover:bg-white transition-all shadow-sm">
+                                                        {ticker.symbol.substring(0, 2)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-base font-bold text-slate-900 leading-none">{ticker.symbol}</p>
+                                                        <p className="text-[11px] text-slate-400 mt-1.5 font-mono uppercase tracking-tight">Ref: {ticker.id}</p>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
-                                                <button
-                                                    onClick={() => setSelectedTicker(ticker)}
-                                                    className='text-blue-600 hover:text-blue-900'
-                                                >
-                                                    View
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(ticker)}
-                                                    className='text-red-600 hover:text-red-900'
-                                                    disabled={isLoading}
-                                                >
-                                                    <FaTrash />
-                                                </button>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                                                    <span className="text-xs font-bold text-slate-600">Active Pool</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-slate-700">{new Date(ticker.updatedAt).toLocaleDateString()}</span>
+                                                    <span className="text-[10px] text-slate-400 mt-1">{new Date(ticker.updatedAt).toLocaleTimeString()}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => setSelectedTicker(ticker)}
+                                                        className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-md transition-all"
+                                                    >
+                                                        <Eye className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeletePreview(ticker)}
+                                                        className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:shadow-md transition-all"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan='4' className='px-6 py-4 text-center text-gray-500'>
-                                            {isLoading ? 'Loading...' : 'No ticker data found'}
+                                        <td colSpan={4} className="px-8 py-24 text-center">
+                                            <div className="flex flex-col items-center space-y-4">
+                                                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
+                                                    <FolderSearch className="w-10 h-10 text-slate-200" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-lg font-bold text-slate-900">No assets detected</p>
+                                                    <p className="text-sm text-slate-400 max-w-xs mx-auto">Your inventory is currently empty. Initialize your first upload to start analyzing seasonality.</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setActiveTab('upload')}
+                                                    className="mt-4 px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
+                                                >
+                                                    Upload First File
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
@@ -288,148 +245,98 @@ export default function DataManagement() {
 
             {/* Ticker Details Modal */}
             {selectedTicker && (
-                <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-                    <div className='bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl'>
-                        <div className='flex justify-between items-center mb-4'>
-                            <h3 className='text-lg font-semibold text-gray-800'>
-                                Ticker Details: {selectedTicker.symbol}
-                            </h3>
-                            <button
-                                onClick={() => setSelectedTicker(null)}
-                                className='text-gray-400 hover:text-gray-600'
-                            >
-                                <span className='text-xl'>&times;</span>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center space-x-4">
+                                <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
+                                    <Info className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 leading-tight">Asset Profile</h3>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Registry Details</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedTicker(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                                <X className="w-6 h-6 text-slate-400" />
                             </button>
                         </div>
-
-                        <div className='space-y-4'>
-                            <div>
-                                <h4 className='font-medium text-gray-700 mb-2'>Ticker Information</h4>
-                                <div className='grid grid-cols-2 gap-4'>
-                                    <div>
-                                        <div className='text-sm text-gray-500'>Symbol</div>
-                                        <div className='font-medium'>{selectedTicker.symbol}</div>
-                                    </div>
-                                    <div>
-                                        <div className='text-sm text-gray-500'>ID</div>
-                                        <div className='font-medium'>{selectedTicker.id}</div>
-                                    </div>
+                        <div className="p-10 space-y-8">
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 shadow-inner">
+                                    <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-2">Trading Symbol</p>
+                                    <p className="text-3xl font-black text-slate-900 tracking-tight">{selectedTicker.symbol}</p>
+                                </div>
+                                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 shadow-inner">
+                                    <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-2">Sync Stamp</p>
+                                    <p className="text-sm font-bold text-slate-700">{new Date(selectedTicker.updatedAt).toLocaleDateString()}</p>
+                                    <p className="text-xs text-slate-400 mt-1">{new Date(selectedTicker.updatedAt).toLocaleTimeString()}</p>
                                 </div>
                             </div>
 
-                            <div>
-                                <h4 className='font-medium text-gray-700 mb-2'>Data Statistics</h4>
-                                <p className='text-gray-500'>Detailed statistics would be displayed here</p>
+                            <div className="p-6 bg-indigo-50/50 rounded-[2rem] border border-indigo-100">
+                                <div className="flex items-center space-x-3 mb-4">
+                                    <RefreshCcw className="w-4 h-4 text-indigo-600" />
+                                    <h4 className="text-sm font-black text-indigo-900 uppercase tracking-widest">Engine Parameters</h4>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between text-xs font-bold border-b border-indigo-100/50 pb-2">
+                                        <span className="text-indigo-400">Internal Reference</span>
+                                        <span className="text-indigo-900 font-mono">{selectedTicker.id}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-bold border-b border-indigo-100/50 pb-2">
+                                        <span className="text-indigo-400">Recalculation Status</span>
+                                        <span className="text-indigo-900">Compliant</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <div className='flex justify-end mt-6'>
-                            <button onClick={() => setSelectedTicker(null)} className='btn-secondary'>
-                                Close
+                        <div className="px-10 py-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+                            <button
+                                onClick={() => setSelectedTicker(null)}
+                                className="px-10 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-black text-slate-700 hover:bg-slate-100 transition-all shadow-md active:scale-95"
+                            >
+                                Close Profile
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
             {/* Delete Confirmation Modal */}
             {deletePreview && (
-                <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-                    <div className='bg-white rounded-lg shadow-xl p-6 w-full max-w-md'>
-                        <div className='flex justify-between items-center mb-4'>
-                            <h3 className='text-lg font-semibold text-gray-800'>Confirm Deletion</h3>
-                            <button
-                                onClick={() => {
-                                    setTickerToDelete(null)
-                                    setDeletePreview(null)
-                                }}
-                                className='text-gray-400 hover:text-gray-600'
-                            >
-                                <span className='text-xl'>&times;</span>
-                            </button>
-                        </div>
-
-                        <div className='space-y-4'>
-                            <div className='bg-red-50 border border-red-200 rounded p-4'>
-                                <div className='flex'>
-                                    <div className='ml-3'>
-                                        <h3 className='text-sm font-medium text-red-800'>Warning</h3>
-                                        <div className='mt-2 text-sm text-red-700'>
-                                            <p>You are about to delete the following data:</p>
-                                        </div>
-                                    </div>
-                                </div>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-10 space-y-8">
+                            <div className="w-24 h-24 bg-rose-50 rounded-[2rem] flex items-center justify-center mx-auto border border-rose-100 shadow-inner">
+                                <AlertTriangle className="w-10 h-10 text-rose-500" />
                             </div>
-
-                            <div className='space-y-2'>
-                                <div className='flex justify-between'>
-                                    <span className='text-sm text-gray-600'>Ticker:</span>
-                                    <span className='text-sm font-medium'>{deletePreview.ticker.symbol}</span>
-                                </div>
-                                <div className='flex justify-between'>
-                                    <span className='text-sm text-gray-600'>Seasonality Records:</span>
-                                    <span className='text-sm font-medium'>
-                                        {deletePreview.willDelete.seasonalityData}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {deletePreview.sampleSeasonalityData.length > 0 && (
-                                <div>
-                                    <h4 className='text-sm font-medium text-gray-700 mb-2'>
-                                        Sample Data to be Deleted:
-                                    </h4>
-                                    <div className='max-h-32 overflow-y-auto'>
-                                        <table className='min-w-full text-xs'>
-                                            <thead className='bg-gray-50'>
-                                                <tr>
-                                                    <th className='px-2 py-1 text-left'>Date</th>
-                                                    <th className='px-2 py-1 text-left'>Close</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {deletePreview.sampleSeasonalityData.map((data, index) => (
-                                                    <tr key={index} className='border-t'>
-                                                        <td className='px-2 py-1'>
-                                                            {new Date(data.date).toLocaleDateString()}
-                                                        </td>
-                                                        <td className='px-2 py-1'>{data.close}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className='bg-yellow-50 border border-yellow-200 rounded p-3'>
-                                <p className='text-sm text-yellow-800'>
-                                    This action cannot be undone. All data will be permanently removed.
+                            <div className="text-center space-y-3">
+                                <h3 className="text-2xl font-black text-slate-900">Remove Ticker?</h3>
+                                <p className="text-sm text-slate-500 leading-relaxed px-4">
+                                    You are about to purge <span className="font-bold text-slate-900 underline decoration-rose-200 decoration-2">{deletePreview.ticker.symbol}</span> and all associated calculation history. This cannot be undone.
                                 </p>
                             </div>
-                        </div>
-
-                        <div className='flex justify-end space-x-3 mt-6'>
-                            <button
-                                onClick={() => {
-                                    setTickerToDelete(null)
-                                    setDeletePreview(null)
-                                }}
-                                className='btn-secondary'
-                                disabled={isLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDeleteConfirm}
-                                className='bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium'
-                                disabled={isLoading}
-                            >
-                                {isLoading ? 'Deleting...' : 'Delete Forever'}
-                            </button>
+                            <div className="grid grid-cols-2 gap-4 pt-4">
+                                <button
+                                    onClick={() => setDeletePreview(null)}
+                                    disabled={isLoading}
+                                    className="px-6 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-black text-slate-600 hover:bg-slate-50 transition-all"
+                                >
+                                    Keep Data
+                                </button>
+                                <button
+                                    onClick={handleDeleteConfirm}
+                                    disabled={isLoading}
+                                    className="px-6 py-4 bg-rose-600 text-white rounded-2xl text-sm font-black hover:bg-rose-700 shadow-xl shadow-rose-200 flex items-center justify-center transition-all active:scale-95"
+                                >
+                                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Purge'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
         </div>
-    )
-}
+    );
+};
