@@ -104,6 +104,35 @@ function generateObjectKey(fileName, batchId = null) {
 // SINGLE FILE UPLOAD (Legacy - processes synchronously)
 // =====================================================
 
+// Single file upload endpoint
+router.post('/', upload.single('file'), async (req, res, next) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                error: 'No file uploaded',
+                message: 'Please upload a CSV file',
+            })
+        }
+
+        // Process the uploaded CSV file
+        const result = await processSingleFile(req.file)
+
+        res.status(200).json({
+            success: true,
+            message: 'File processed successfully',
+            data: {
+                fileName: req.file.originalname,
+                recordsProcessed: result.recordsProcessed,
+                tickersFound: result.tickersFound,
+                tickersCreated: result.tickersCreated,
+                dataEntriesCreated: result.dataEntriesCreated,
+            },
+        })
+    } catch (error) {
+        next(error)
+    }
+})
+
 /**
  * Process single CSV file
  * @param {Object} file - Multer file object
