@@ -17,11 +17,11 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
-import { StatsCard } from '@/components/admin/StatsCard.js';
-import { DataManagement } from '@/components/admin/DataManagement.js';
-import { UserManagement } from '@/components/admin/UserManagement.js';
-import { SystemSettings } from '@/components/admin/SystemSetting.js';
-import { ToastContainer, showToast } from '@/components/admin/Toast.js';
+import { StatsCard } from '../../components/admin/StatsCard.js';
+import { DataManagement } from '../../components/admin/DataManagement.js';
+import { UserManagement } from '../../components/admin/UserManagement.js';
+import { SystemSettings } from '../../components/admin/SystemSetting.js';
+import { ToastContainer, showToast } from '../../components/admin/Toast.js';
 
 const API_BASE_URL = 'http://localhost:3001';
 

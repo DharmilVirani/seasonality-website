@@ -6,8 +6,8 @@ import {
     UploadCloud, FolderSearch, AlertTriangle, X,
     Calendar, Info, Loader2, PlusCircle
 } from 'lucide-react';
-import { showToast } from '@/components/admin/Toast.js';
-import { BulkUpload } from '@/components/BulkUpload.js';
+import { showToast } from '../../components/admin/Toast.js';
+import { BulkUpload } from '../../components/BulkUpload.js';
 
 const API_BASE_URL = 'http://localhost:3001';
 
@@ -199,7 +199,7 @@ export const DataManagement = ({ onUpload }) => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-5">
-                                                <div className="flex items-center justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center justify-end space-x-3 transition-opacity">
                                                     <button
                                                         onClick={() => setSelectedTicker(ticker)}
                                                         className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-md transition-all"

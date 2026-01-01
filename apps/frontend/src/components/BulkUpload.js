@@ -895,7 +895,7 @@ import {
     UploadCloud, X, FileText, Loader2, ArrowRight, RefreshCcw,
     Server, Activity, ShieldAlert, Clock, CheckCircle2, History
 } from 'lucide-react';
-import { showToast } from '@/components/admin/Toast.js';
+import { showToast } from '../components/admin/Toast';
 
 const API_BASE_URL = 'http://localhost:3001';
 
@@ -927,7 +927,7 @@ export const BulkUpload = ({ onUploadComplete }) => {
             } catch (err) {
                 console.error('Polling error:', err);
             }
-        }, 2000);
+        }, 5000);
 
         return () => clearInterval(pollInterval);
     }, [batchId, isProcessing, onUploadComplete]);

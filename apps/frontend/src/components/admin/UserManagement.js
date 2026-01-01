@@ -6,7 +6,7 @@ import {
   MoreVertical, Filter, UserCheck, ShieldAlert,
   UserCog
 } from 'lucide-react';
-import { showToast } from './Toast.js';
+import { showToast } from '../../components/admin/Toast.js';
 
 export const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
