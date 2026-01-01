@@ -31,6 +31,7 @@ const dataRoutes = require('./routes/dataRoutes')
 const healthRoutes = require('./routes/healthRoutes')
 const authRoutes = require('./routes/authRoutes')
 const userRoutes = require('./routes/userRoutes')
+const deleteTickerRoutes = require('./routes/deleteTickerRoutes')
 
 // Route setup
 app.use('/api/data', dataRoutes)
@@ -42,6 +43,7 @@ app.use('/api/upload/bulk', uploadRoutes)
 app.use('/api/upload/bulk/presign', uploadRoutes)
 app.use('/api/upload/bulk/process', uploadRoutes)
 app.use('/api/upload/bulk/:batchId/status', uploadRoutes)
+app.use('/api/ticker', deleteTickerRoutes)
 
 // Health check endpoint
 app.get('/', (req, res) => {
