@@ -59,8 +59,5 @@ minio-data/
 Dockerfile
 .dockerignore
 
-# Infra
-infra/
-
 # Volumes
 volumes/
