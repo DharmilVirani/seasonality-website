@@ -1,0 +1,235 @@
+{
+  "timestamp": "2026-01-05T05:59:26.449Z",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "successRate": 100
+  },
+  "tolerance": 0.000001,
+  "errors": [],
+  "details": [
+    {
+      "test": "Statistics - basicStats",
+      "passed": true,
+      "details": [
+        {
+          "metric": "All Count",
+          "expected": 10,
+          "actual": 10,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Avg Return All",
+          "expected": 0.66,
+          "actual": 0.66,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Sum Return All",
+          "expected": 6.6,
+          "actual": 6.6,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Pos Count",
+          "expected": 5,
+          "actual": 5,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Avg Return Pos",
+          "expected": 2.8,
+          "actual": 2.8,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Sum Return Pos",
+          "expected": 14,
+          "actual": 14,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Neg Count",
+          "expected": 4,
+          "actual": 4,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Avg Return Neg",
+          "expected": -1.85,
+          "actual": -1.85,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Sum Return Neg",
+          "expected": -7.4,
+          "actual": -7.4,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        }
+      ]
+    },
+    {
+      "test": "Statistics - precisionTest",
+      "passed": true,
+      "details": [
+        {
+          "metric": "All Count",
+          "expected": 6,
+          "actual": 6,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Avg Return All",
+          "expected": 0,
+          "actual": 0,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Sum Return All",
+          "expected": 0,
+          "actual": 0,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Pos Count",
+          "expected": 3,
+          "actual": 3,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Avg Return Pos",
+          "expected": 0.2,
+          "actual": 0.2,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Sum Return Pos",
+          "expected": 0.6,
+          "actual": 0.6,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Neg Count",
+          "expected": 3,
+          "actual": 3,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Avg Return Neg",
+          "expected": -0.2,
+          "actual": -0.2,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        },
+        {
+          "metric": "Sum Return Neg",
+          "expected": -0.6,
+          "actual": -0.6,
+          "passed": true,
+          "difference": 0,
+          "relativeDifference": 0
+        }
+      ]
+    },
+    {
+      "test": "Consecutive Values - basicStats",
+      "passed": true,
+      "details": [
+        {
+          "metric": "maximumPositiveCount",
+          "expected": 1,
+          "actual": 1,
+          "passed": true
+        },
+        {
+          "metric": "maximumNegativeCount",
+          "expected": 1,
+          "actual": 1,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "test": "Consecutive Values - consecutiveTest",
+      "passed": true,
+      "details": [
+        {
+          "metric": "maximumPositiveCount",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        },
+        {
+          "metric": "maximumNegativeCount",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "test": "Trending Days",
+      "passed": true,
+      "details": [
+        {
+          "metric": "StartDate",
+          "expected": "2023-01-01",
+          "actual": "2023-01-01",
+          "passed": true
+        },
+        {
+          "metric": "EndDate",
+          "expected": "2023-01-04",
+          "actual": "2023-01-04",
+          "passed": true
+        },
+        {
+          "metric": "TotalDays",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        },
+        {
+          "metric": "PercentChange",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

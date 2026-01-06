@@ -1,0 +1,811 @@
+{
+    "info": {
+        "name": "Seasonality SaaS Backend - Complete Testing Collection",
+        "description": "Complete Postman collection for testing the entire backend flow from authentication to file upload to analysis",
+        "version": "1.0.0",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{jwt_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3001",
+            "type": "string"
+        },
+        {
+            "key": "jwt_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "batch_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "upload_url",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "object_key",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Authentication Flow",
+            "item": [
+                {
+                    "name": "1.1 Register Research Team User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Research Team Member\",\n  \"email\": \"research@seasonality.com\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"RESEARCH_TEAM\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Register a new research team user who can upload files"
+                    }
+                },
+                {
+                    "name": "1.2 Login Research Team User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"research@seasonality.com\",\n  \"password\": \"SecurePass123!\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login and get JWT token for authenticated requests"
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    if (response.token) {",
+                                    "        pm.collectionVariables.set('jwt_token', response.token);",
+                                    "        console.log('JWT token saved:', response.token.substring(0, 20) + '...');",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "2. Health Checks",
+            "item": [
+                {
+                    "name": "2.1 Basic Health Check",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                ""
+                            ]
+                        },
+                        "description": "Basic server health check"
+                    }
+                },
+                {
+                    "name": "2.2 Upload Service Health",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/health",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "health"
+                            ]
+                        },
+                        "description": "Check upload service health and configuration"
+                    }
+                },
+                {
+                    "name": "2.3 Analysis Service Health",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/analysis/health",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "analysis",
+                                "health"
+                            ]
+                        },
+                        "description": "Check analysis service health (requires authentication)"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Enhanced Upload Flow (Direct Processing)",
+            "item": [
+                {
+                    "name": "3.1 Validate CSV File",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": "seasonality.csv",
+                                    "description": "Upload your seasonality.csv file here"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/enhanced/validate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "enhanced",
+                                "validate"
+                            ]
+                        },
+                        "description": "Validate CSV file structure without processing"
+                    }
+                },
+                {
+                    "name": "3.2 Upload Single CSV File",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": "seasonality.csv",
+                                    "description": "Upload your seasonality.csv file here"
+                                },
+                                {
+                                    "key": "timeframe",
+                                    "value": "DAILY",
+                                    "type": "text",
+                                    "description": "DAILY, MONDAY_WEEKLY, EXPIRY_WEEKLY, MONTHLY, YEARLY"
+                                },
+                                {
+                                    "key": "generateAllTimeframes",
+                                    "value": "true",
+                                    "type": "text",
+                                    "description": "Generate all timeframes from daily data"
+                                },
+                                {
+                                    "key": "calculateReturns",
+                                    "value": "true",
+                                    "type": "text",
+                                    "description": "Calculate return percentages"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/enhanced/single",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "enhanced",
+                                "single"
+                            ]
+                        },
+                        "description": "Upload and process single CSV file with multi-timeframe generation"
+                    }
+                },
+                {
+                    "name": "3.3 Get Upload History",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/enhanced/history?limit=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "enhanced",
+                                "history"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "COMPLETED",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Get upload history for the authenticated user"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. Bulk Upload Flow (Presigned URLs)",
+            "item": [
+                {
+                    "name": "4.1 Get Presigned URLs",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"files\": [\n    {\n      \"name\": \"seasonality.csv\",\n      \"size\": 1024000\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/bulk/presign",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "bulk",
+                                "presign"
+                            ]
+                        },
+                        "description": "Get presigned URLs for bulk upload"
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    if (response.success && response.data.batchId) {",
+                                    "        pm.collectionVariables.set('batch_id', response.data.batchId);",
+                                    "        console.log('Batch ID saved:', response.data.batchId);",
+                                    "        ",
+                                    "        if (response.data.files && response.data.files.length > 0) {",
+                                    "            const firstFile = response.data.files[0];",
+                                    "            if (firstFile.uploadUrl) {",
+                                    "                pm.collectionVariables.set('upload_url', firstFile.uploadUrl);",
+                                    "                pm.collectionVariables.set('object_key', firstFile.objectKey);",
+                                    "                console.log('Upload URL saved for:', firstFile.fileName);",
+                                    "            }",
+                                    "        }",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "4.2 Upload File to MinIO",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "text/csv"
+                            }
+                        ],
+                        "body": {
+                            "mode": "file",
+                            "file": {
+                                "src": "seasonality.csv"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{upload_url}}",
+                            "host": [
+                                "{{upload_url}}"
+                            ]
+                        },
+                        "description": "Upload file directly to MinIO using presigned URL (NO Authorization header needed)"
+                    }
+                },
+                {
+                    "name": "4.3 Start Bulk Processing",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"batchId\": \"{{batch_id}}\",\n  \"objectKeys\": [\"{{object_key}}\"],\n  \"fileNames\": [\"seasonality.csv\"]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/bulk/process",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "bulk",
+                                "process"
+                            ]
+                        },
+                        "description": "Start processing uploaded files"
+                    }
+                },
+                {
+                    "name": "4.4 Check Batch Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/bulk/{{batch_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "bulk",
+                                "{{batch_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Check processing status of the batch"
+                    }
+                },
+                {
+                    "name": "4.5 List All Batches",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/bulk?limit=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "bulk"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "COMPLETED",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "List all upload batches"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Analysis Flow",
+            "item": [
+                {
+                    "name": "5.1 Daily Analysis",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"symbolNameToPlotValue\": \"NIFTY\",\n  \"startDate\": \"2024-01-01\",\n  \"endDate\": \"2024-12-31\",\n  \"positiveNegativeDayFilter\": \"All\",\n  \"weekdayNameFilter\": [\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\"],\n  \"consecutiveDays\": 3,\n  \"trendDirection\": \"more\",\n  \"percentageThreshold\": 0,\n  \"saveResults\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/analysis/daily",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "analysis",
+                                "daily"
+                            ]
+                        },
+                        "description": "Perform daily analysis with filters"
+                    }
+                },
+                {
+                    "name": "5.2 Weekly Analysis",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"symbolNameToPlotValue\": \"NIFTY\",\n  \"startDate\": \"2024-01-01\",\n  \"endDate\": \"2024-12-31\",\n  \"positiveNegativeMondayWeekFilter\": \"All\",\n  \"positiveNegativeExpiryWeekFilter\": \"All\",\n  \"saveResults\": false\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/analysis/weekly",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "analysis",
+                                "weekly"
+                            ]
+                        },
+                        "description": "Perform weekly analysis (Monday + Expiry)"
+                    }
+                },
+                {
+                    "name": "5.3 Monthly Analysis",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"symbolNameToPlotValue\": \"NIFTY\",\n  \"startDate\": \"2024-01-01\",\n  \"endDate\": \"2024-12-31\",\n  \"specificMonthSelectionValue\": 0,\n  \"entryType\": \"Open\",\n  \"exitType\": \"Close\",\n  \"tradeType\": \"Long\",\n  \"returnType\": \"Percent\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/analysis/monthly",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "analysis",
+                                "monthly"
+                            ]
+                        },
+                        "description": "Perform monthly analysis with seasonal patterns"
+                    }
+                },
+                {
+                    "name": "5.4 Consecutive Analysis",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"symbolNameToPlotValue\": \"NIFTY\",\n  \"trendType\": \"Bullish\",\n  \"consecutiveDays\": 3,\n  \"minimumAccuracy\": 60,\n  \"minimumTotalPnL\": 0,\n  \"minimumSampleSize\": 10,\n  \"minimumAveragePnL\": 0,\n  \"operation12\": \"AND\",\n  \"operation23\": \"AND\",\n  \"operation34\": \"AND\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/analysis/consecutive",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "analysis",
+                                "consecutive"
+                            ]
+                        },
+                        "description": "Perform complex consecutive analysis"
+                    }
+                },
+                {
+                    "name": "5.5 Get Analysis History",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/analysis/history?limit=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "analysis",
+                                "history"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "analysisType",
+                                    "value": "DAILY",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Get analysis history for the user"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Performance & Monitoring",
+            "item": [
+                {
+                    "name": "6.1 Get Performance Metrics",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/analysis/performance",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "analysis",
+                                "performance"
+                            ]
+                        },
+                        "description": "Get performance metrics for all services"
+                    }
+                },
+                {
+                    "name": "6.2 Clear Cache",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/analysis/cache/clear",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "analysis",
+                                "cache",
+                                "clear"
+                            ]
+                        },
+                        "description": "Clear analysis cache (admin only)"
+                    }
+                },
+                {
+                    "name": "6.3 Get Upload Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/upload/enhanced/stats",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "upload",
+                                "enhanced",
+                                "stats"
+                            ]
+                        },
+                        "description": "Get upload processing statistics"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "7. Data Verification",
+            "item": [
+                {
+                    "name": "7.1 Get Tickers",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/data/tickers",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "data",
+                                "tickers"
+                            ]
+                        },
+                        "description": "Get list of available tickers"
+                    }
+                },
+                {
+                    "name": "7.2 Get Ticker Data",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/data/ticker/NIFTY?timeframe=DAILY&limit=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "data",
+                                "ticker",
+                                "NIFTY"
+                            ],
+                            "query": [
+                                {
+                                    "key": "timeframe",
+                                    "value": "DAILY"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Get data for a specific ticker"
+                    }
+                }
+            ]
+        }
+    ]
+}

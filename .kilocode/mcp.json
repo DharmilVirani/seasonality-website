@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {
+        "DEFAULT_MINIMUM_TOKENS": ""
+      }
+    },
+    "sequentialthinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "e2b": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@e2b/mcp-server"
+      ],
+      "env": {
+        "E2B_API_KEY": "e2b_98c4cdb5c6e9ba2df9b67ce4c412d289fdbb8119"
+      }
+    }
+  }
+}

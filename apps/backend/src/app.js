@@ -20,17 +20,20 @@ app.use(morgan("dev"));
 // Rate limiting for API protection
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 100,
   message: "Too many requests from this IP, please try again later",
 });
 app.use(limiter);
 
-// Import routes
+// Import routes (MAIN branch)
 const uploadRoutes = require("./routes/uploadRoutes");
 const dataRoutes = require("./routes/dataRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const deleteTickerRoutes = require("./routes/deleteTickerRoutes");
+const analysisRoutes = require("./routes/analysisRoutes");
+const enhancedUploadRoutes = require("./routes/enhancedUploadRoutes");
 
 // Route setup
 app.use("/api/upload", uploadRoutes);
@@ -40,8 +43,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/upload/bulk", uploadRoutes);
 app.use("/api/upload/bulk/presign", uploadRoutes);
-app.use("/api/upload/bulk/process", uploadRoutes);
 app.use("/api/upload/bulk/:batchId/status", uploadRoutes);
+app.use("/api/ticker", deleteTickerRoutes);
+app.use("/api/analysis", analysisRoutes);
+app.use("/api/upload/enhanced", enhancedUploadRoutes);
 
 // Health check endpoint
 app.get("/", (req, res) => {
@@ -62,23 +67,19 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use("*", (req, res) => {
-  res
-    .status(404)
-    .json({
-      error: "Not Found",
-      message: "The requested resource does not exist",
-    });
+  res.status(404).json({
+    error: "Not Found",
+    message: "The requested resource does not exist",
+  });
 });
 
 // Initialize MinIO buckets and start server
 const startServer = async () => {
   try {
-    // Initialize MinIO buckets
     console.log("Initializing MinIO buckets...");
     await initializeBuckets();
     console.log("MinIO buckets initialized successfully");
 
-    // Start server
     const PORT = process.env.BACKEND_PORT || 3001;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Backend server running on port ${PORT}`);
@@ -92,7 +93,6 @@ const startServer = async () => {
     console.error("Failed to initialize MinIO buckets:", error.message);
     console.log("Server starting without MinIO - uploads may fail");
 
-    // Start server anyway (MinIO might be optional)
     const PORT = process.env.BACKEND_PORT || 3001;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Backend server running on port ${PORT}`);
