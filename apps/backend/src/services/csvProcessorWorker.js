@@ -499,9 +499,15 @@ function parseDate(dateStr) {
     if (!dateStr || dateStr.trim() === '') {
         throw new Error('Empty date value');
     }
+<<<<<<< HEAD
+    
+    const trimmed = dateStr.trim();
+    
+=======
 
     const trimmed = dateStr.trim();
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
     // Handle dd-mm-yyyy format (e.g., 24-12-2024)
     const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
     if (ddmmyyyyMatch) {
@@ -511,7 +517,11 @@ function parseDate(dateStr) {
             return date;
         }
     }
+<<<<<<< HEAD
+    
+=======
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
     // Handle dd/mm/yyyy format (e.g., 24/12/2024)
     const ddmmyyyySlashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (ddmmyyyySlashMatch) {
@@ -521,7 +531,11 @@ function parseDate(dateStr) {
             return date;
         }
     }
+<<<<<<< HEAD
+    
+=======
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
     // Handle yyyy-mm-dd format (ISO format)
     const yyyymmddMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (yyyymmddMatch) {
@@ -531,13 +545,21 @@ function parseDate(dateStr) {
             return date;
         }
     }
+<<<<<<< HEAD
+    
+=======
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
     // Fallback: try standard JavaScript Date parsing
     const date = new Date(trimmed);
     if (!isNaN(date.getTime())) {
         return date;
     }
+<<<<<<< HEAD
+    
+=======
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
     throw new Error(`Unable to parse date: "${dateStr}" (expected format: dd-mm-yyyy)`);
 }
 
@@ -585,12 +607,20 @@ function normalizeColumnNames(headers) {
  */
 function detectDelimiter(content) {
     const firstLine = content.split('\n')[0];
+<<<<<<< HEAD
+    
+=======
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
     // Count occurrences of common delimiters
     const tabCount = (firstLine.match(/\t/g) || []).length;
     const commaCount = (firstLine.match(/,/g) || []).length;
     const semicolonCount = (firstLine.match(/;/g) || []).length;
+<<<<<<< HEAD
+    
+=======
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
     // Return the most common delimiter
     if (tabCount > commaCount && tabCount > semicolonCount) {
         return '\t';
@@ -609,11 +639,19 @@ async function processCSVFile(filePath, batchId, fileId) {
     try {
         // Read and parse CSV file
         const fileContent = fs.readFileSync(filePath, 'utf-8');
+<<<<<<< HEAD
+        
+        // Detect delimiter
+        const delimiter = detectDelimiter(fileContent);
+        console.log(`Detected delimiter: ${delimiter === '\t' ? 'TAB' : delimiter === ',' ? 'COMMA' : 'SEMICOLON'}`);
+        
+=======
 
         // Detect delimiter
         const delimiter = detectDelimiter(fileContent);
         console.log(`Detected delimiter: ${delimiter === '\t' ? 'TAB' : delimiter === ',' ? 'COMMA' : 'SEMICOLON'}`);
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
         const parsed = parse(fileContent, {
             columns: false,
             skip_empty_lines: true,
@@ -684,7 +722,11 @@ async function processCSVFile(filePath, batchId, fileId) {
         const seasonalityData = records.map((row, index) => {
             try {
                 const date = parseDate(row.date);
+<<<<<<< HEAD
+                
+=======
 
+>>>>>>> f4f7bfcb3fe28bfe16ef4513b0c0f39b1312498d
                 return {
                     date,
                     tickerId: tickerMap[row.ticker],
